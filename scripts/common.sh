@@ -49,7 +49,7 @@ EOF
 _load_state() {
     if [[ -f /tmp/artix_install_state.conf ]]; then
         source /tmp/artix_install_state.conf;
-    fi;
+    fi
     return 0;
 }
 

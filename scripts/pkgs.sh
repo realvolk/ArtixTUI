@@ -30,7 +30,13 @@ _install_base() {
         pacman-key --populate artix 2>&1;
         if grep -q "^\[universe\]" /etc/pacman.conf; then
             pacman-key --populate archlinux 2>&1;
-        fi;
+        fi
+
+        if [[ "${KERNEL_CHOICE}" == "xanmod" ]]; then
+            printf "[*] Activating Arch Linux repositories for Xanmod...\n";
+            pacman -Sy --noconfirm archlinux-keyring 2>&1;
+            pacman-key --populate archlinux 2>&1;
+        fi
 
         printf "[*] Starting basestrap installation...\n";
         (basestrap /mnt "${pkgs[@]}" --noconfirm --noprogressbar --color never 2>&1 || true) | \

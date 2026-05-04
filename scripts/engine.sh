@@ -27,7 +27,7 @@ _setup_storage() {
             printf "%s" "${LUKS_PASS}" | cryptsetup luksFormat -q --batch-mode "${root_p}" -;
             printf "%s" "${LUKS_PASS}" | cryptsetup open "${root_p}" cryptroot -;
             target_dev="/dev/mapper/cryptroot";
-        fi;
+        fi
 
         if [[ "${FS_TYPE}" == "btrfs" ]]; then
             printf "[*] Creating BTRFS subvolumes...\n";
@@ -46,7 +46,7 @@ _setup_storage() {
             printf "[*] Creating EXT4 filesystem...\n";
             mkfs.ext4 -F -q "${target_dev}" &>/dev/null;
             mount "${target_dev}" /mnt;
-        fi;
+        fi
 
         printf "[*] Formatting EFI partition...\n";
         mkfs.fat -F32 "${efi_p}" &>/dev/null;
