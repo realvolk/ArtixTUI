@@ -40,7 +40,7 @@ Everything is up to the user's choice.
 ## Installation
     bash
 
-    git clone https://github.com/MadeInAmbrosia/ArtixTUI
+    git clone https://github.com/realvolk/ArtixTUI
     cd ArtixTUI
     chmod +x install
     sudo ./install -h
