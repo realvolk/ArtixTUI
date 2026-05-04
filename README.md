@@ -97,5 +97,5 @@ Any bugs should be reported either here on Github or via contacting *volk.v* on 
 
 ## Credits
 
-#### Original: [MadeInAmbrosia](https://github.com/MadeInAmbrosia/)
+#### Original: [realvolk](https://github.com/realvolk/)
 
