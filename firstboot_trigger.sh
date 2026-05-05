@@ -15,24 +15,25 @@ function main {
 
     [[ ! -f /usr/local/bin/firstboot.sh ]] && return 0;
 
-    if pgrep -f "firstboot.sh" > /dev/null; then
+    if pgrep -f "[f]irstboot.sh" > /dev/null; then
         return 0;
     fi
-    local msg="ARTIX POST-INSTALLATION  \n\nIt looks like this is your first boot.\nThe system is now ready for final setup.\n\nRun setup now?"
+
+    local msg="ARTIX POST-INSTALLATION  \n\nIt looks like this is your first boot.\nThe system is now ready for final setup.\n\nRun setup now?";
 
     if _tui_yesno "First Boot" "${msg}" 2>/dev/null; then
         clear;
         printf "[*] Launching firstboot script...\n";
         if [[ "${EUID}" -eq 0 ]]; then
-            /usr/local/bin/firstboot.sh
+            /usr/local/bin/firstboot.sh;
         else
-            sudo /usr/local/bin/firstboot.sh
+            sudo /usr/local/bin/firstboot.sh;
         fi
         clear;
         return 0;
     else
         clear;
-        printf "[*] Skipping setup for now. You can run it manually via /usr/local/bin/firstboot.sh\n"
+        printf "[*] Skipping setup for now. You can run it manually via /usr/local/bin/firstboot.sh\n";
         sleep 1;
     fi
 }
