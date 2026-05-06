@@ -70,7 +70,7 @@ function _tui_main_menu {
             if [[ -n "${LUKS_PASS}" && "${LUKS_PASS}" == "${LUKS_PASS_CONFIRM}" ]]; then
                 break
             else
-                dialog --title "Error" --msgbox "LUKS lozinke se ne podudaraju! Pokušajte ponovo." 8 50
+                dialog --title "Error" --msgbox "LUKS passwords are not matching! Try again." 8 50
             fi
         done
     else
@@ -90,7 +90,7 @@ function _tui_main_menu {
         if [[ -n "${USER_PASS}" && "${USER_PASS}" == "${USER_PASS_CONFIRM}" ]]; then
             break
         else
-            dialog --title "Error" --msgbox "Korisničke lozinke se ne podudaraju!" 8 50
+            dialog --title "Error" --msgbox "User passwords not matching! Try again." 8 50
         fi
     done
 
@@ -101,7 +101,7 @@ function _tui_main_menu {
         if [[ -n "${ROOT_PASS}" && "${ROOT_PASS}" == "${ROOT_PASS_CONFIRM}" ]]; then
             break
         else
-            dialog --title "Error" --msgbox "Root lozinke se ne podudaraju!" 8 50
+            dialog --title "Error" --msgbox "Root passwords not matching!!!" 8 50
         fi
     done
 
@@ -113,7 +113,7 @@ function _dispatch {
     local target="${SCRIPT_DIR}/scripts/install_${MODE}.sh";
     
     if [[ ! -f "${target}" ]]; then
-        _error_exit "Skripta nije pronađena: ${target}";
+        _error_exit "Script not found: ${target}";
     fi
     
     chmod +x "${target}";
