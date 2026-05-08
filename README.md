@@ -1,7 +1,11 @@
-# ArtixInstall - TUI Version!
+# ArtixInstall - v4-x
 
 Artix Linux installation script. Intended for anyone willing to try out Artix without the hassle.
-(TUI)
+(TUI) 
+
+#### Version: v4-x
+#### This version "works", but the way of execution is old.
+#### Currently, v5 does a much better job at the installation and post-installation process.
 
 ## Overview
 
