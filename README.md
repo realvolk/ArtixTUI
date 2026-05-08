@@ -36,8 +36,6 @@ Selectable display server stack:
 
 Wayland compositors automatically install XWayland support where needed.
 
----
-
 ## Desktop Environments / Window Managers
 
 Currently supported:
@@ -54,7 +52,6 @@ Currently supported:
 
 Minimal installs are also supported.
 
----
 
 ## Kernel Selection
 
@@ -69,8 +66,6 @@ Available kernel choices:
 - Bazzite Kernel
 - TKG Kernel
 
----
-
 ## Filesystem Support
 
 Supported filesystems:
@@ -82,8 +77,6 @@ Supported filesystems:
 - Bcachefs
 - exFAT
 - ZFS
-
----
 
 ## GPU Driver Detection
 
@@ -104,8 +97,6 @@ Includes support for:
 - Nouveau fallback
 - xLibre driver stack
 
----
-
 ## Networking
 
 Selectable network stack:
@@ -115,8 +106,6 @@ Selectable network stack:
 - ConnMan
 - Manual setup
 
----
-
 ## Audio
 
 Selectable audio stack:
@@ -125,15 +114,11 @@ Selectable audio stack:
 - PulseAudio
 - No audio stack
 
----
-
 ## Security
 
 Optional:
 
 - LUKS full disk encryption
-
----
 
 ## Bootloaders
 
@@ -143,8 +128,6 @@ Supported bootloaders:
 - rEFInd
 - EFISTUB
 
----
-
 ## Shell Selection
 
 Selectable user shell:
@@ -152,8 +135,6 @@ Selectable user shell:
 - Bash
 - Zsh
 - Fish
-
----
 
 ## Extra Tools
 
