@@ -386,14 +386,18 @@ EOF
 
         printf '[*] Starting basestrap...\n';
 
+        local debug_log;
+
+        debug_log="${PWD}/basestrap-debug.log";
+
         printf '\n[*] Installing packages:\n' \
-            | tee /home/artix/ArtixTUI/basestrap-debug.log;
+            | tee "${debug_log}";
 
         printf '%s\n' "${pkgs[@]}" \
-            | tee -a /home/artix/ArtixTUI/basestrap-debug.log;
+            | tee -a "${debug_log}";
 
         basestrap /mnt "${pkgs[@]}" \
-            2>&1 | tee -a /home/artix/ArtixTUI/basestrap-debug.log;
+            2>&1 | tee -a "${debug_log}";
 
         if [[ "${kernel}" == 'tkg' ]]; then
             printf '[*] Cloning linux-tkg repository...\n';

@@ -14,6 +14,7 @@ stage_post() {
     local kernel_choice;
     local audio_stack;
     local extras;
+    local log_file;
 
     init="$(state_get INIT)";
     network_stack="$(state_get NETWORK_STACK)";
@@ -22,6 +23,8 @@ stage_post() {
     kernel_choice="$(state_get KERNEL_CHOICE linux)";
     audio_stack="$(state_get AUDIO_STACK pipewire)";
     extras="$(state_get EXTRAS '')";
+
+    log_file='/tmp/post-stage.log';
 
     {
         printf '[*] Preparing installer environment...\n';
@@ -71,7 +74,7 @@ install_extras
 printf '\n[✓] Post-install configuration complete.\n'
 EOF
 
-    } 2>&1 | tee /mnt/root/post-stage.log | dialog \
+    } 2>&1 | tee "${log_file}" | dialog \
         --clear \
         --title " Post Installation " \
         --programbox 22 90;

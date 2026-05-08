@@ -204,22 +204,24 @@ tui_select_extras() {
         tui_checklist \
             " Extras " \
             "Select optional packages:" \
-            "git"          "Git tools & base-devel"        on \
-            "flatpak"      "Flatpak support"               off \
-            "fastfetch"    "Fastfetch system info"         off \
-            "ufw"          "Firewall"                      off \
-            "bluez"        "Bluetooth support"             off \
-            "zram-tools"   "Compressed RAM swap"           off \
-            "fzf"          "Fuzzy finder"                  off \
-            "zoxide"       "Smarter cd command"            off \
-            "starship"     "Cross-shell prompt"            off \
-            "eza"          "Modern ls replacement"         off \
-            "btop"         "Modern resource monitor"       off \
-            "htop"         "Interactive process viewer"    off \
-            "nvtop"        "GPU process monitor"           off \
-            "tmux"         "Terminal multiplexer"          off \
-            "usb_modeswitch" "USB modem switching tools"   off \
-            "rsvc"         "SashexSRB runit service helper" off
+            "git"          "Git tools & base-devel"         on \
+            "flatpak"      "Flatpak support"                off \
+            "fastfetch"    "Fastfetch system info"          off \
+            "ufw"          "Firewall"                       off \
+            "bluez"        "Bluetooth support"              off \
+            "zram-tools"   "Compressed RAM swap"            off \
+            "fzf"          "Fuzzy finder"                   off \
+            "zoxide"       "Smarter cd command"             off \
+            "starship"     "Cross-shell prompt"             off \
+            "eza"          "Modern ls replacement"          off \
+            "btop"         "Modern resource monitor"        off \
+            "htop"         "Interactive process viewer"     off \
+            "nvtop"        "GPU process monitor"            off \
+            "tmux"         "Terminal multiplexer"           off \
+            "usb_modeswitch" "USB modem switching tools"    off \
+            "rsvc"         "SashexSRB runit service helper" off \
+            | tr -d '"' \
+            | xargs
     );
 
     state_set EXTRAS "${extras}";
