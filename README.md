@@ -1,101 +1,347 @@
-# ArtixInstall - TUI Version!
+# ArtixTUI - Artix Linux TUI Installer
 
-Artix Linux installation script. Intended for anyone willing to try out Artix without the hassle.
-(TUI)
+Modular TUI installer for Artix Linux. 
 
-## Overview
+Designed for users who want a configurable Artix setup without manually performing every installation step.
 
-This script automates Artix Linux installation while adhering to UNIX philosophy principles: modularity, plain text interfaces, and small focused tools that pipe together.
+####  Version: v5.0.3
+---
 
-Everything is up to the user's choice.
+# Overview
 
-## Features
+ArtixTUI automates the installation process while still keeping the install modular, transparent, and user-controlled.
 
-**NEWEST FEATURE(S)**: NVIDIA 20,30,40,50 Driver support! 
+The installer follows a modular shell-based structure with separate stages and post-install components instead of one massive monolithic script.
 
-**Init systems**: OpenRC, runit, s6, dinit
+Almost everything is selectable during installation.
 
-**Display drivers**: Includes Xlibre drivers and Xorg, up for taste of the user.
+---
 
-**Security**: Optional LUKS encryption.
+# Features
+## Init Systems
 
-**Storage:** BTRFS or EXT4. 
+Supports all official Artix init systems:
 
-**Network**: Ethernet default. Installs iwd, wpa_supplicant, and dhcpcd.
+- OpenRC
+- runit
+- s6
+- dinit
 
-**Bootloaders**: Grub, rEFInd, efistub.
+## Display Stack
 
-**Kernels**: Baseline Linux Kernel, LTS, Hardened, Xanmod (AUR), TKG (Compile-able)
+Selectable display server stack:
 
-**Desktop environments**: Selectable during the installation process: XFCE4, XLQt, XLQE, Wayland, dwm, vxvm, i3..
+- X.Org
+- xLibre
 
-## Requirements
+Wayland compositors automatically install XWayland support where needed.
 
-- Artix Linux live environment *(any init system)*
+---
 
-- Internet connectivity
+## Desktop Environments / Window Managers
 
-- Git 
+Currently supported:
 
-## Installation
-    bash
+- XFCE4
+- LXQt
+- LXDE
+- Hyprland
+- Niri
+- Sway
+- i3wm
+- dwm
+- IceWM
 
-    git clone https://github.com/realvolk/ArtixTUI
-    cd ArtixTUI
-    chmod +x install
-    sudo ./install -h
+Minimal installs are also supported.
 
-## What the script does
+---
 
-- Verifies network connectivity
+## Kernel Selection
 
-- Gives 2 options:
+Available kernel choices:
 
-- Automatic: Script partitions the disk
+- Linux
+- Linux LTS
+- Linux Hardened
+- Linux Libre
+- CachyOS Bore
+- XanMod
+- Bazzite Kernel
+- TKG Kernel
 
-- Manual: User pre-partitions before running script
+---
 
-- Presents configuration options for init system, kernel and bootloader, DE.
+## Filesystem Support
 
+Supported filesystems:
+
+- ext4
+- BTRFS
+- XFS
+- F2FS
+- Bcachefs
+- exFAT
+- ZFS
+
+---
+
+## GPU Driver Detection
+
+Automatic GPU and virtualization detection.
+
+Supports:
+
+- Intel
+- AMD
+- NVIDIA
+- VMware
+- VirtualBox
+- QEMU/KVM
+
+Includes support for:
+
+- NVIDIA Open Kernel Modules
+- Nouveau fallback
+- xLibre driver stack
+
+---
+
+## Networking
+
+Selectable network stack:
+
+- NetworkManager
+- dhcpcd + iwd
+- ConnMan
+- Manual setup
+
+---
+
+## Audio
+
+Selectable audio stack:
+
+- PipeWire
+- PulseAudio
+- No audio stack
+
+---
+
+## Security
+
+Optional:
+
+- LUKS full disk encryption
+
+---
+
+## Bootloaders
+
+Supported bootloaders:
+
+- GRUB
+- rEFInd
+- EFISTUB
+
+---
+
+## Shell Selection
+
+Selectable user shell:
+
+- Bash
+- Zsh
+- Fish
+
+---
+
+## Extra Tools
+
+Optional extras menu includes:
+
+- Git + base-devel
+- Flatpak
+- Fastfetch
+- UFW
+- Bluetooth support
+- ZRAM
+- fzf
+- zoxide
+- starship
+- eza
+- btop
+- htop
+- nvtop
+- tmux
+- usb_modeswitch
+- rsvc (runit helper)
+
+---
+
+# Requirements
+
+- Artix Linux live environment
+- Internet connection
+- EFI system
+- Git
+
+---
+
+# Installation
+
+```bash
+git clone https://github.com/realvolk/ArtixTUI
+cd ArtixTUI
+
+chmod +x install
+
+sudo ./install
+```
+
+---
+
+# What The Installer Does
+
+- Verifies required environment
+- Handles disk partitioning and formatting
+- Configures init system
+- Installs selected kernel
 - Installs base system
+- Configures networking
+- Installs bootloader
+- Generates fstab
+- Configures users
+- Installs drivers
+- Installs desktop environment/window manager
+- Enables required services
+- Applies post-install configuration
 
-- Installs iwd, wpa_supplicant, and dhcpcd
+---
 
-- Configures first-boot scripts for driver and service finalization.
+# Script Structure
 
-## Post-install
+## Core
 
-- First boot triggers firstboot.sh, which handles:
+| File | Purpose |
+|---|---|
+| `install` | Main installer entry point |
+| `scripts/common.sh` | Basic operations |
+| `scripts/state.sh` | Installer state management |
+| `scripts/tui/` | TUI framework and menus |
+| `scripts/stages/` | Installation stages |
+| `scripts/install/` | Base installation logic |
+| `scripts/post/` | Post-install modules |
 
-- Driver installation (including Xlibre where applicable).
+---
 
-- Service enabling based on selected init system.
+## Modular Post-Install Components
 
-- WiFi configuration via iwd.
+Separated into individual modules:
 
-- Allows the user to choose to enable arch repos.
+- drivers
+- audio
+- desktop
+- networking
+- extras
 
-- Creates the user, installs drivers of choice, sets up audio, the DE.
+---
 
-- Contains bonus tools such as Git and base-devel, Codecs, UFW, Bluetooth, Flatpak, Zram, Fastfetch, (runit only) SashexSRB's rsvc.
+# Goals
 
-## Script structure
-### File	Purpose
-*install* -	Main installation routine
+- Modular shell design
+- Minimal assumptions
+- Multi-init support
+- Easy maintenance
+- Easier debugging than monolithic installers
+- Keep the installer understandable
 
-*firstboot.sh* - Post-install configuration on first boot
+---
 
-*firstboot_trigger.sh* -	Trigger mechanism for firstboot.sh
+# Maintenance
 
-*scripts/* - Manual and Auto scripts for base-line installation, along with the core logic scripts (common.sh, engine.sh, pkgs.sh)
+Actively maintained and tested as features are added. However, this does not mean that bugs are not present.
 
-## Maintenance
+Bug reports and feedback are welcome, either as issues on the repo or directly contacting me on discord: **(volk.v)**.
 
-Actively maintained and tested for every new feature added.
+I am the sole maintainer.
 
-Any bugs should be reported either here on Github or via contacting *volk.v* on Discord.
+*Just because I added something does NOT mean it is immediately tested.*
 
-## Credits
+---
 
-#### Original: [realvolk](https://github.com/realvolk/)
+## The "Oh no's":
 
+### The script won't even launch! 
+```bash
+chmod +x install
+```
+
+### My terminal is acting all weird after the script exited for whatever reason!
+```bash
+TERM=xterm-256color
+reset
+```
+Alternatively: **CTRL+ALT+F2** or any other shortcut for a new TTY (NOTE: the `TERM=...` will also work for VMs).
+### My internet / wifi went out! What now!?
+
+You should generally wait for your wifi (modem, router, etc.) to regain connection, then execute:
+```bash
+sudo ./install -r
+```
+### I found a weird bug! / I got thrown an "OK" and nothing else!
+If you think you've found something that might be a bug, or a missing feature, check with:
+```bash
+sudo ./install -r -d
+```
+
+This will make your script run in debug mode via the `-d` (or `--debug`) flag. If it still won't tell you what's happening, note on which STAGE the script is on.
+
+##### Example: `drivers.sh` gets stuck on ```[*] Installing drivers...```? This is how to check what happens:
+```bash
+cd ArtixTUI/scripts/post/ && nano drivers.sh
+
+    INSIDE drivers.sh:
+set -Eeuo pipefail;
+
+    Should become:
+set -Eeuxo pipefail;
+
+```
+CTRL+O, Enter, CTRL+X to exit. run the script with the -r flag.
+
+Alternatively, check (If a bug occurs, the partitions will stay mounted):
+```bash
+artix-chroot /mnt
+cd root/ArtixTUI
+```
+In `ArtixTUI/` (or `root`) you may find the following log files: `basestrap-debug.log`, `drivers-debug.log` and `post-stage.log `. 
+
+###### P.S. You check with `cat ...` command.
+
+### Er.. where's my system!? I rebooted and there's nothing!
+
+That means that either the script completely failed the `artix-chroot` part and somehow still continued, or you're a wizard. Either way, make an issue on the github repo. I'll gladly help out.
+
+---
+
+# QnA
+
+###### *Q: Why is there only 3 .log files for the total script?! What if it breaks somewhere else?*
+
+###### A: Because the other parts worked fine during testing, except these 3. I will add more in the future as features pile up, or new bugs appear.
+
+###### *Q: WTF? Why would I wanna go into the scripts folder and sub-folder to just set the -x flag?*
+
+###### A: Because you'll make both your and my life way easier if the script tells you where it's hanging.
+
+###### *Q: Where can I suggest new features?*
+
+###### A: Either as an issue on the github repo, or messaging me on Discord, or smoke signals if you prefer.
+
+---
+
+# Credits
+
+Original project by:
+
+- [realvolk](https://github.com/realvolk/)

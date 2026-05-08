@@ -1,159 +1,199 @@
 #!/usr/bin/env bash
-set -eo pipefail;
+# shellcheck source=/dev/null
 
-SELF_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
-SCRIPT_DIR="${SELF_PATH%/*}"
-source "${SCRIPT_DIR}/scripts/common.sh"
+set -Eeuo pipefail;
 
+SELF_PATH="$(readlink -f "${BASH_SOURCE[0]}")";
+BASE_DIR="${SELF_PATH%/*}";
+SCRIPT_DIR="${BASE_DIR}/scripts";
+
+source "${SCRIPT_DIR}/common.sh";
+source "${SCRIPT_DIR}/state.sh";
+
+source "${SCRIPT_DIR}/tui/core.sh";
+source "${SCRIPT_DIR}/tui/menus.sh";
+source "${SCRIPT_DIR}/tui/summary.sh";
+
+source "${SCRIPT_DIR}/storage/partition.sh";
+source "${SCRIPT_DIR}/storage/filesystem.sh";
+source "${SCRIPT_DIR}/storage/mount.sh";
+
+source "${SCRIPT_DIR}/install/basestrap.sh";
+source "${SCRIPT_DIR}/install/bootloader.sh";
+source "${SCRIPT_DIR}/install/handoff.sh";
+source "${SCRIPT_DIR}/install/services.sh";
+source "${SCRIPT_DIR}/install/users.sh";
+
+source "${SCRIPT_DIR}/post/drivers.sh";
+source "${SCRIPT_DIR}/post/networking.sh";
+source "${SCRIPT_DIR}/post/desktop.sh";
+source "${SCRIPT_DIR}/post/audio.sh";
+source "${SCRIPT_DIR}/post/extras.sh";
+
+source "${SCRIPT_DIR}/stages/preflight.sh";
+source "${SCRIPT_DIR}/stages/storage.sh";
+source "${SCRIPT_DIR}/stages/base.sh";
+source "${SCRIPT_DIR}/stages/chroot.sh";
+source "${SCRIPT_DIR}/stages/post.sh";
+source "${SCRIPT_DIR}/stages/finalize.sh";
 
 MODE="";
+DEBUG="false";
 ARGV=();
 
-function _parse_docblock {
-    local esc; printf -v esc "\033";
+parse_docblock() {
+    local esc;
     local help="${1}";
-    help="$(sed -E "s/^[[:space:]]*#\|[[:space:]]?//g" <<< "${help}")";
-    help="$(sed -E "s/\{e:([0-9a-zA-Z;]+)\}/${esc}[\1/g" <<< "${help}")";
-    printf "%s\n" "${help}";
+
+    printf -v esc '\033';
+
+    help="$(sed -E \
+        's/^[[:space:]]*#\|[[:space:]]?//g' \
+        <<< "${help}")";
+
+    help="$(sed -E \
+        "s/\{e:([0-9a-zA-Z;]+)\}/${esc}[\1/g" \
+        <<< "${help}")";
+
+    printf '%s\n' "${help}";
 }
 
-function _extract_docblock {
+extract_docblock() {
     local function_name="${1}";
-    local line docblock="";
+    local line;
+    local docblock='';
     local -a buffer=();
+
     while IFS= read -r line || [[ -n "${line}" ]]; do
         if [[ "${line}" =~ ^[[:space:]]*#\| ]]; then
-            buffer+=( "${line}" );
+            buffer+=("${line}");
             continue;
-        fi
-        if [[ "${line}" =~ "function ${function_name}" ]] || [[ "${line}" =~ "${function_name}()" ]]; then
+        fi;
+
+        if [[ "${line}" =~ ${function_name}\(\) ]]; then
             if [[ ${#buffer[@]} -gt 0 ]]; then
-                printf -v docblock "%s\n" "${buffer[@]}";
+                printf -v docblock '%s\n' "${buffer[@]}";
                 break;
-            fi
-        fi
+            fi;
+        fi;
+
         buffer=();
     done < "${SELF_PATH}";
-    [[ -z "${docblock}" ]] && _error_exit "documentation not found";
-    _parse_docblock "${docblock}";
+
+    [[ -n "${docblock}" ]] \
+        || die 'documentation not found';
+
+    parse_docblock "${docblock}";
 }
 
-function _tui_main_menu {
-    command -v dialog >/dev/null || pacman -Sy --noconfirm dialog;
-
-    DISK=$(dialog --stdout --title "Disk Selection" --menu "Choose target drive:" 15 60 5 $(lsblk -dpno NAME,SIZE | awk '{print $1 " " $2}'));
-    [[ -z "${DISK}" ]] && exit 1;
-
-    INIT=$(dialog --stdout --title "Init System" --menu "Select init:" 12 40 4 \
-        "openrc" "" "runit" "" "dinit" "" "s6" "");
-    
-    FS_TYPE=$(dialog --stdout --title "Filesystem" --menu "Select root FS:" 10 40 2 \
-        "btrfs" "Snapshots & Compression" "ext4" "Classic & Stable");
-
-    KERNEL_CHOICE=$(dialog --stdout --title "Kernel" --menu "Select kernel:" 15 45 5 \
-        "linux" "Vanilla" "linux-lts" "LTS" "linux-hardened" "Hardened" \
-        "xanmod" "Xanmod (AUR)" "tkg" "TKG (Compile)");
-
-    BOOTLOADER=$(dialog --stdout --title "Bootloader" --menu "Select boot method:" 12 45 3 \
-        "grub" "Standard GRUB" "refind" "rEFInd UI" "efistub" "Direct EFI Launch");
-
-    WM_DE=$(dialog --stdout --title "Interface" --menu "Select DE/WM:" 18 45 9 \
-        "xfce4" "XFCE4" "lxqt" "LXQt" "hyprland" "Hyprland (Wayland)" \
-        "niri" "Niri (Wayland)" "i3wm" "i3" "vxvm" "vxvm" "dwm" "dwm" "none" "CLI Only");
-
-    if dialog --title "Encryption" --yesno "Enable LUKS Encryption?" 8 50; then
-        USE_LUKS="yes";
-        while true; do
-            LUKS_PASS=$(dialog --stdout --title "LUKS" --passwordbox "Enter LUKS Passphrase:" 10 50);
-            LUKS_PASS_CONFIRM=$(dialog --stdout --title "LUKS" --passwordbox "Confirm LUKS Passphrase:" 10 50);
-
-            if [[ -n "${LUKS_PASS}" && "${LUKS_PASS}" == "${LUKS_PASS_CONFIRM}" ]]; then
-                break
-            else
-                dialog --title "Error" --msgbox "LUKS passwords are not matching! Try again." 8 50
-            fi
-        done
-    else
-        USE_LUKS="no";
-        LUKS_PASS="";
-    fi
-
-    USER_NAME=$(dialog --stdout --title "User Account" --inputbox "Enter username:" 10 40);
-    USER_SHELL=$(dialog --stdout --title "Shell" --menu "Select default shell:" 10 40 2 \
-        "/bin/bash" "Bash (Standard)" \
-        "/bin/zsh" "Zsh (Advanced)");
-
-    while true; do
-        USER_PASS=$(dialog --stdout --title "User Password" --passwordbox "Enter password for ${USER_NAME}:" 10 50);
-        USER_PASS_CONFIRM=$(dialog --stdout --title "User Password" --passwordbox "Confirm password for ${USER_NAME}:" 10 50);
-        
-        if [[ -n "${USER_PASS}" && "${USER_PASS}" == "${USER_PASS_CONFIRM}" ]]; then
-            break
-        else
-            dialog --title "Error" --msgbox "User passwords not matching! Try again." 8 50
-        fi
-    done
-
-    while true; do
-        ROOT_PASS=$(dialog --stdout --title "Root Password" --passwordbox "Enter root password:" 10 50);
-        ROOT_PASS_CONFIRM=$(dialog --stdout --title "Root Password" --passwordbox "Confirm root password:" 10 50);
-        
-        if [[ -n "${ROOT_PASS}" && "${ROOT_PASS}" == "${ROOT_PASS_CONFIRM}" ]]; then
-            break
-        else
-            dialog --title "Error" --msgbox "Root passwords not matching!!!" 8 50
-        fi
-    done
-
-    _save_state;
+run_install_pipeline() {
+    stage_preflight;
+    stage_storage;
+    stage_base;
+    stage_chroot;
+    stage_post;
+    stage_finalize;
 }
 
-function _dispatch {
-    [[ -z "${MODE}" ]] && _error_exit "no mode selected";
-    local target="${SCRIPT_DIR}/scripts/install_${MODE}.sh";
-    
-    if [[ ! -f "${target}" ]]; then
-        _error_exit "Script not found: ${target}";
-    fi
-    
-    chmod +x "${target}";
-    exec bash "${target}" "${ARGV[@]}";
+start_auto_install() {
+    tui_collect_install_config;
+
+    tui_show_summary;
+
+    if ! tui_yesno \
+        " Begin Installation " \
+        "Proceed with installation?"; then
+
+        clear;
+        printf '[*] Installation cancelled.\n';
+        exit 0;
+    fi;
+
+    state_save;
+
+    run_install_pipeline;
 }
 
+start_manual_install() {
+    state_set INSTALL_MODE manual;
 
+    run_install_pipeline;
+}
+
+resume_install() {
+    state_load;
+
+    run_install_pipeline;
+}
 
 #| {e:1;32m}Usage:{e:m} ./install [options]
 #|
 #| {e:1;33m}Options:{e:m}
 #|   -a, --auto      TUI-driven automated Artix installation
-#|   -m, --manual    Manual installation shell
+#|   -m, --manual    Manual installation mode
+#|   -r, --resume    Resume interrupted installation
+#|   -d, --debug     Enable shell tracing
 #|   -h, --help      Show this help message
-#|   -d, --debug     Uses "set -x" for debugging!
-function main {
-    _is_efi;
-    [[ "${EUID}" -ne 0 ]] && _error_exit "must be run as root";
-    
-    local DEBUG=false;
+main() {
+    ensure_dirs;
+
+    require_root;
+    require_efi;
+
     while [[ $# -gt 0 ]]; do
         case "${1}" in
-            -a|--auto)   MODE="auto"; shift ;;
-            -m|--manual) MODE="manual"; shift ;;
-            -d|--debug)  DEBUG=true; shift ;;
-            -h|--help)   _extract_docblock "main"; exit 0 ;;
-            *)           ARGV+=("${1}"); shift ;;
-        esac
-    done
+            -a|--auto)
+                MODE='auto';
+                shift;
+                ;;
 
-    if [[ "${DEBUG}" == "true" ]]; then
-        set -x; 
-        ARGV+=("--debug"); 
-    fi
+            -m|--manual)
+                MODE='manual';
+                shift;
+                ;;
 
-    if [[ "${MODE}" == "auto" ]]; then
-        _tui_main_menu;
-    fi
+            -r|--resume)
+                MODE='resume';
+                shift;
+                ;;
 
-    _dispatch;
+            -d|--debug)
+                DEBUG='true';
+                shift;
+                ;;
+
+            -h|--help)
+                extract_docblock main;
+                exit 0;
+                ;;
+
+            *)
+                ARGV+=("${1}");
+                shift;
+                ;;
+        esac;
+    done;
+
+    [[ "${DEBUG}" == 'true' ]] && set -x;
+
+    case "${MODE}" in
+        auto)
+            start_auto_install;
+            ;;
+
+        manual)
+            start_manual_install;
+            ;;
+
+        resume)
+            resume_install;
+            ;;
+
+        *)
+            extract_docblock main;
+            exit 1;
+            ;;
+    esac;
 }
 
 main "$@";
