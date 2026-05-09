@@ -45,19 +45,19 @@ install_desktop() {
         mango)
             printf '[*] Setting up Chaotic-AUR for MangoWM...\n';
 
-            pacman-key --init;
-            pacman-key --populate artix;
+            pacman-key --init
+            pacman-key --populate artix archlinux
+            # Now, you may ask, why the this? Simple, pacman likes to cache things. Corrupted packages are a big no-no.
+            rm -f \
+                /var/cache/pacman/pkg/chaotic-keyring* \
+                /var/cache/pacman/pkg/chaotic-mirrorlist*
 
             pacman-key \
-                --recv-keys FBA220DFC880C036 \
-                --keyserver hkp://keyserver.ubuntu.com;
+                --recv-key 3056513887B78AEB \
+                --keyserver hkp://keyserver.ubuntu.com
 
             pacman-key \
-                --lsign-key FBA220DFC880C036;
-
-            pacman -U --noconfirm \
-                'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst' \
-                'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst';
+                --lsign-key 3056513887B78AEB
 
             if ! grep -q '^\[chaotic-aur\]' /etc/pacman.conf; then
                 cat <<'EOF' >> /etc/pacman.conf
@@ -67,7 +67,13 @@ Include = /etc/pacman.d/chaotic-mirrorlist
 EOF
             fi
 
-            pacman -Sy --noconfirm;
+            pacman -Sy --noconfirm
+
+            pacman -S --noconfirm --needed \
+                chaotic-keyring \
+                chaotic-mirrorlist
+
+            pacman -Sy --noconfirm
 
             pkgs+=(
                 mangowm

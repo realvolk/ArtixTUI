@@ -130,6 +130,19 @@ Continue anyway?" \
     fi
 }
 
+detect_partial_install() {
+    mountpoint -q /mnt \
+        || return 1;
+
+    [[ -d /mnt/etc ]] \
+        || return 1;
+
+    [[ -d /mnt/var/lib/pacman ]] \
+        || return 1;
+
+    return 0;
+}
+
 run_install_pipeline() {
     stage_preflight;
     stage_storage;
@@ -170,14 +183,47 @@ resume_install() {
     run_install_pipeline;
 }
 
+start_recovery_install() {
+    if ! detect_partial_install; then
+        dialog \
+            --title " Recovery Mode " \
+            --msgbox \
+            "No partial installation detected in /mnt." \
+            8 50;
+
+        exit 1;
+    fi
+
+    if ! dialog \
+        --title " Recovery Mode " \
+        --yesno \
+"Detected an existing installation mounted at /mnt.
+
+This usually means a previous installation
+was interrupted or partially completed.
+
+Attempt recovery and continue installation?" \
+        12 60; then
+
+        clear;
+        printf '[*] Recovery cancelled.\n';
+        exit 0;
+    fi
+
+    printf '[*] Entering recovery mode...\n';
+
+    run_install_pipeline;
+}
+
 #| {e:1;32m}Usage:{e:m} ./install [options]
 #|
 #| {e:1;33m}Options:{e:m}
-#|   -a, --auto      TUI-driven automated Artix installation
-#|   -m, --manual    Manual installation mode
-#|   -r, --resume    Resume interrupted installation
-#|   -d, --debug     Enable shell tracing
-#|   -h, --help      Show this help message
+#|   -a, --auto        TUI-driven automated Artix installation
+#|   -m, --manual      Manual installation mode
+#|   -r, --resume      Resume interrupted installation
+#|   -rr, --recovery   Recover partially completed installation
+#|   -d, --debug       Enable shell tracing
+#|   -h, --help        Show this help message
 main() {
     ensure_dirs;
 
@@ -199,6 +245,11 @@ main() {
 
             -r|--resume)
                 MODE='resume';
+                shift;
+                ;;
+
+            -rr|--recovery)
+                MODE='recovery';
                 shift;
                 ;;
 
@@ -241,6 +292,10 @@ main() {
 
         resume)
             resume_install;
+            ;;
+
+        recovery)
+            start_recovery_install;
             ;;
 
         *)
