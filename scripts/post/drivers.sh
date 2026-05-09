@@ -109,7 +109,35 @@ install_drivers() {
             ;;
 
         xanmod)
-            pkgs+=(linux-xanmod-headers)
+            local cpu_level;
+            local kernel_headers;
+
+            cpu_level=$(
+                /lib/ld-linux-x86-64.so.2 --help \
+                    | grep -E 'x86-64-v[2-4] \(supported' \
+                    | head -n1 \
+                    | awk '{print $1}'
+            );
+
+            case "${cpu_level}" in
+                x86-64-v4)
+                    kernel_headers='linux-xanmod-x64v4-headers'
+                    ;;
+
+                x86-64-v3)
+                    kernel_headers='linux-xanmod-x64v3-headers'
+                    ;;
+
+                x86-64-v2)
+                    kernel_headers='linux-xanmod-x64v2-headers'
+                    ;;
+
+                *)
+                    kernel_headers='linux-xanmod-headers'
+                    ;;
+            esac
+
+            pkgs+=("${kernel_headers}")
             ;;
 
         tkg)

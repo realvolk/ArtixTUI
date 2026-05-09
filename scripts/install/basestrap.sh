@@ -8,6 +8,7 @@ install_base_system() {
     local bootloader;
     local network_stack;
     local user_shell;
+    local display_manager;
 
     init="$(state_get INIT)";
     kernel="$(state_get KERNEL_CHOICE linux)";
@@ -15,6 +16,7 @@ install_base_system() {
     bootloader="$(state_get BOOTLOADER grub)";
     network_stack="$(state_get NETWORK_STACK dhcpcd+iwd)";
     user_shell="$(state_get USER_SHELL bash)";
+    display_manager="$(state_get DISPLAY_MANAGER none)";
 
     local ucode='amd-ucode';
 
@@ -68,6 +70,13 @@ install_base_system() {
             pkgs+=(
                 linux
                 linux-headers
+            );
+            ;;
+
+        linux-zen)
+            pkgs+=(
+                linux-zen
+                linux-zen-headers
             );
             ;;
 
@@ -328,22 +337,7 @@ EOF
             );
 
             printf '\n[!] WARNING: ZFS support is experimental.\n';
-            printf '[!] DKMS rebuilds may be required after kernel updates.\n\n';
-            ;;
-
-[extra]
-Include = /etc/pacman.d/mirrorlist-arch
-EOF
-            fi
-
-            pacman -Sy --noconfirm;
-
-            pkgs+=(
-                zfs-utils
-                zfs-dkms
-            );
-
-            printf '\n[!] WARNING: ZFS support on Arch/Artix is experimental.\n';
+            printf '[!] DKMS rebuilds may be required after kernel updates.\n';
             printf '[!] Kernel updates may occasionally break ZFS modules.\n\n';
             ;;
 
@@ -365,6 +359,26 @@ EOF
             ;;
 
         efistub)
+            ;;
+    esac;
+
+    case "${display_manager}" in
+        lightdm)
+            pkgs+=(
+                lightdm
+                lightdm-gtk-greeter
+                "lightdm-${init}"
+            );
+            ;;
+
+        sddm)
+            pkgs+=(
+                sddm
+                "sddm-${init}"
+            );
+            ;;
+
+        none)
             ;;
     esac;
 

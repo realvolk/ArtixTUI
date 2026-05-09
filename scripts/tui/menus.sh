@@ -91,6 +91,7 @@ tui_select_kernel() {
             " Kernel " \
             "Select kernel:" \
             "linux"                "Standard kernel" \
+            "linux-zen"            "Zen kernel" \
             "linux-lts"            "Long-term support" \
             "linux-hardened"       "Security-focused" \
             "linux-libre"          "Free software only kernel" \
@@ -127,6 +128,40 @@ tui_select_desktop() {
     [[ -n "${desktop}" ]] || return 1;
 
     state_set WM_DE "${desktop}";
+}
+
+tui_select_display_manager() {
+    local wm_de;
+    local dm='none';
+
+    wm_de="$(state_get WM_DE none)";
+
+    case "${wm_de}" in
+        none|dwm|i3wm|icewm|hyprland|niri|sway)
+            dm=$(
+                tui_menu \
+                    " Display Manager " \
+                    "Select display manager:" \
+                    "none"     "No display manager" \
+                    "lightdm"  "LightDM" \
+                    "sddm"     "SDDM"
+            );
+            ;;
+        
+        *)
+            dm=$(
+                tui_menu \
+                    " Display Manager " \
+                    "Select display manager:" \
+                    "lightdm"  "LightDM" \
+                    "sddm"     "SDDM"
+            );
+            ;;
+    esac
+
+    [[ -n "${dm}" ]] || return 1;
+
+    state_set DISPLAY_MANAGER "${dm}";
 }
 
 tui_select_xstack() {
@@ -383,6 +418,7 @@ tui_collect_install_config() {
     tui_select_bootloader;
     tui_select_kernel;
     tui_select_desktop;
+    tui_select_display_manager;
     tui_select_xstack;
     tui_select_network_stack;
     tui_select_audio_stack;

@@ -1,29 +1,24 @@
 install_desktop() {
     local wm_de;
     local init;
+    local display_manager;
     local pkgs=();
 
     wm_de="${WM_DE:-none}";
     init="${INIT:-openrc}";
+    display_manager="${DISPLAY_MANAGER:-none}";
 
     case "${wm_de}" in
         xfce4)
             pkgs+=(
                 xfce4
                 xfce4-goodies
-
-                lightdm
-                lightdm-gtk-greeter
-                "lightdm-${init}"
             )
             ;;
 
         lxqt)
             pkgs+=(
                 lxqt
-
-                sddm
-                "sddm-${init}"
             )
             ;;
 
@@ -31,10 +26,6 @@ install_desktop() {
             pkgs+=(
                 lxde
                 lxappearance
-
-                lightdm
-                lightdm-gtk-greeter
-                "lightdm-${init}"
             )
             ;;
 
@@ -87,10 +78,6 @@ install_desktop() {
                 i3lock
                 dmenu
                 xterm
-
-                lightdm
-                lightdm-gtk-greeter
-                "lightdm-${init}"
             )
             ;;
 
@@ -99,10 +86,6 @@ install_desktop() {
                 dwm
                 dmenu
                 xterm
-
-                lightdm
-                lightdm-gtk-greeter
-                "lightdm-${init}"
             )
             ;;
 
@@ -111,10 +94,6 @@ install_desktop() {
                 icewm
                 icewm-themes
                 xterm
-
-                lightdm
-                lightdm-gtk-greeter
-                "lightdm-${init}"
             )
             ;;
 
@@ -130,15 +109,17 @@ install_desktop() {
         --needed \
         "${pkgs[@]}";
 
-    case "${wm_de}" in
-        xfce4|lxde|i3wm|dwm|icewm)
+    case "${display_manager}" in
+        lightdm)
             enable_service lightdm
             ;;
 
-        lxqt)
+        sddm)
             enable_service sddm
             ;;
+    esac
 
+    case "${wm_de}" in
         hyprland|niri|sway)
             enable_service seatd
             ;;
