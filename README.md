@@ -1,11 +1,12 @@
 # ArtixTUI - Artix Linux TUI Installer
 
-Modular TUI installer for Artix Linux. 
+Modular TUI installer for Artix Linux.
 
 Designed for users who want a configurable Artix setup without manually performing every installation step.
 
-####  Version: v5.3.0.2
-###### *(Version: Rewrite/Major Release, New Feature, Major bug fix, Minor bug fix/Hot fix)
+#### Version: v6.1.0.0
+###### *(Version: Rewrite/Major Release, New Feature, Major bug fix, Minor bug fix/Hot fix)*
+
 ---
 
 # Overview
@@ -16,9 +17,12 @@ The installer follows a modular shell-based structure with separate stages and p
 
 Almost everything is selectable during installation.
 
+The installer can automatically self-update when a newer upstream version is detected.
+
 ---
 
 # Features
+
 ## Init Systems
 
 Supports all official Artix init systems:
@@ -37,6 +41,8 @@ Selectable display server stack:
 
 Wayland compositors automatically install XWayland support where needed.
 
+---
+
 ## Desktop Environments / Window Managers
 
 Currently supported:
@@ -53,6 +59,7 @@ Currently supported:
 
 Minimal installs are also supported.
 
+---
 
 ## Kernel Selection
 
@@ -62,10 +69,12 @@ Available kernel choices:
 - Linux LTS
 - Linux Hardened
 - Linux Libre
-- CachyOS Bore
+- CachyOS
 - XanMod
-- Bazzite Kernel
 - TKG Kernel
+- Bazzite Kernel
+
+---
 
 ## Filesystem Support
 
@@ -78,6 +87,8 @@ Supported filesystems:
 - Bcachefs
 - exFAT
 - ZFS
+
+---
 
 ## GPU Driver Detection
 
@@ -98,6 +109,8 @@ Includes support for:
 - Nouveau fallback
 - xLibre driver stack
 
+---
+
 ## Networking
 
 Selectable network stack:
@@ -107,6 +120,8 @@ Selectable network stack:
 - ConnMan
 - Manual setup
 
+---
+
 ## Audio
 
 Selectable audio stack:
@@ -115,11 +130,15 @@ Selectable audio stack:
 - PulseAudio
 - No audio stack
 
+---
+
 ## Security
 
 Optional:
 
 - LUKS full disk encryption
+
+---
 
 ## Bootloaders
 
@@ -127,7 +146,9 @@ Supported bootloaders:
 
 - GRUB
 - rEFInd
-- EFISTUB
+- EFIStub (automatic efibootmgr entry creation)
+
+---
 
 ## Shell Selection
 
@@ -136,6 +157,8 @@ Selectable user shell:
 - Bash
 - Zsh
 - Fish
+
+---
 
 ## Extra Tools
 
@@ -164,7 +187,7 @@ Optional extras menu includes:
 
 - Artix Linux live environment
 - Internet connection
-- EFI system
+- UEFI boot mode
 - Git
 
 ---
@@ -180,6 +203,8 @@ chmod +x install
 sudo ./install
 ```
 
+The installer can automatically self-update when a newer upstream version is detected.
+
 ---
 
 # What The Installer Does
@@ -191,12 +216,15 @@ sudo ./install
 - Installs base system
 - Configures networking
 - Installs bootloader
+- Automatically creates EFI boot entries
 - Generates fstab
 - Configures users
 - Installs drivers
 - Installs desktop environment/window manager
 - Enables required services
 - Applies post-install configuration
+- Supports installer recovery/resume
+- Self-updates outdated installer versions
 
 ---
 
@@ -228,6 +256,25 @@ Separated into individual modules:
 
 ---
 
+# Recovery
+
+If installation is interrupted:
+
+```bash
+sudo ./install -r
+```
+
+To attempt recovery of a partially completed installation:
+
+```bash
+sudo ./install -rr
+```
+
+Recovery mode attempts to detect existing mounted installations in `/mnt`
+and continue from the appropriate stage.
+
+---
+
 # Goals
 
 - Modular shell design
@@ -251,58 +298,147 @@ I am the sole maintainer.
 
 ---
 
+# Known Caveats
+
+- Some custom kernels may require additional repositories.
+- ZFS support depends on matching kernel headers.
+- EFIStub installations require proper UEFI firmware support.
+
+---
+
+# Self-Updater Notice
+
+The installer replaces outdated files during self-update.
+
+Do not keep custom modifications inside the installer directory unless version controlled.
+
+---
+
 ## The "Oh no's":
 
-### The script won't even launch! 
+### The script won't even launch!
+
 ```bash
 chmod +x install
 ```
 
+---
+
 ### My terminal is acting all weird after the script exited for whatever reason!
+
 ```bash
 TERM=xterm-256color
 reset
 ```
-Alternatively: **CTRL+ALT+F2** or any other shortcut for a new TTY (NOTE: the `TERM=...` will also work for VMs).
+
+Alternatively: **CTRL+ALT+F2** or any other shortcut for a new TTY.
+
+*(NOTE: the `TERM=...` workaround also works inside VMs.)*
+
+---
+
 ### My internet / wifi went out! What now!?
 
 You should generally wait for your wifi (modem, router, etc.) to regain connection, then execute:
+
 ```bash
 sudo ./install -r
 ```
+
+---
+
 ### I found a weird bug! / I got thrown an "OK" and nothing else!
+
 If you think you've found something that might be a bug, or a missing feature, check with:
+
 ```bash
 sudo ./install -r -d
 ```
 
-This will make your script run in debug mode via the `-d` (or `--debug`) flag. If it still won't tell you what's happening, note on which STAGE the script is on.
+This runs the installer in debug mode using the `-d` (or `--debug`) flag.
 
-##### Example: `drivers.sh` gets stuck on ```[*] Installing drivers...```? This is how to check what happens:
+If the issue still is not obvious, note the installation STAGE where the installer stopped.
+
+##### Example: `drivers.sh` gets stuck on `[*] Installing drivers...`
+
 ```bash
-cd ArtixTUI/scripts/post/ && nano drivers.sh
-
-    INSIDE drivers.sh:
-set -Eeuo pipefail;
-
-    Should become:
-set -Eeuxo pipefail;
-
+cd ArtixTUI/scripts/post/
+nano drivers.sh
 ```
-CTRL+O, Enter, CTRL+X to exit. run the script with the -r flag.
 
-Alternatively, check (If a bug occurs, the partitions will stay mounted):
+Inside `drivers.sh`:
+
+```bash
+set -Eeuo pipefail;
+```
+
+Should temporarily become:
+
+```bash
+set -Eeuxo pipefail;
+```
+
+Save:
+- CTRL+O
+- Enter
+- CTRL+X
+
+Then run the installer again with:
+
+```bash
+sudo ./install -r
+```
+
+---
+
+Alternatively, check the generated logs.
+
+If a failure occurs, partitions usually remain mounted:
+
 ```bash
 artix-chroot /mnt
-cd root/ArtixTUI
+
+cd /root/ArtixTUI
 ```
-In `ArtixTUI/` (or `root`) you may find the following log files: `basestrap-debug.log`, `drivers-debug.log` and `post-stage.log `. 
 
-###### P.S. You check with `cat ...` command.
+Inside `ArtixTUI/` you may find:
 
-### Er.. where's my system!? I rebooted and there's nothing!
+- `basestrap-debug.log`
+- `drivers-debug.log`
+- `post-stage.log`
 
-That means that either the script completely failed the `artix-chroot` part and somehow still continued, or you're a wizard. Either way, make an issue on the github repo. I'll gladly help out.
+###### P.S.
+
+You can inspect logs with:
+
+```bash
+cat filename.log
+```
+
+---
+
+### System failed to boot after installation
+
+Boot failures are usually related to:
+
+- incorrect EFI setup
+- unsupported kernel/repository combinations
+- failed driver installation
+- incomplete bootloader configuration
+
+Try:
+
+```bash
+sudo ./install -rr -d
+```
+
+Then inspect:
+
+```bash
+/root/ArtixTUI/
+```
+
+for generated logs.
 
 ---
 
@@ -310,15 +446,34 @@ That means that either the script completely failed the `artix-chroot` part and 
 
 ###### *Q: Why is there only 3 .log files for the total script?! What if it breaks somewhere else?*
 
-###### A: Because the other parts worked fine during testing, except these 3. I will add more in the future as features pile up, or new bugs appear.
+###### A:
+
+Some installation stages include dedicated debug logging
+for easier troubleshooting of hardware-specific failures.
+
+Additional logging may be added over time as new features and edge cases appear.
+
+---
 
 ###### *Q: WTF? Why would I wanna go into the scripts folder and sub-folder to just set the -x flag?*
 
-###### A: Because you'll make both your and my life way easier if the script tells you where it's hanging.
+###### A:
+
+Because it makes both debugging and bug reporting significantly easier.
+
+If the shell trace shows exactly where the script hangs,
+the problem is usually much easier to identify.
+
+---
 
 ###### *Q: Where can I suggest new features?*
 
-###### A: Either as an issue on the github repo, or messaging me on Discord, or smoke signals if you prefer.
+###### A:
+
+Either:
+- as an issue on the GitHub repo
+- via Discord
+- or smoke signals if you prefer
 
 ---
 

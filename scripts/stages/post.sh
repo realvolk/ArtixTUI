@@ -15,6 +15,7 @@ stage_post() {
     local audio_stack;
     local extras;
     local log_file;
+    local rc=0;
 
     init="$(state_get INIT)";
     network_stack="$(state_get NETWORK_STACK)";
@@ -35,7 +36,7 @@ stage_post() {
 
         printf '[*] Entering chroot environment...\n';
 
-        artix-chroot /mnt /bin/bash <<EOF
+        if ! artix-chroot /mnt /bin/bash <<EOF
 set -Eeuo pipefail
 
 export INIT="${init}"
@@ -73,11 +74,37 @@ install_extras
 
 printf '\n[✓] Post-install configuration complete.\n'
 EOF
+        then
+            rc=$?
+            printf '\n[!] Post-install stage failed with exit code: %s\n' "${rc}"
+        fi
 
     } 2>&1 | tee "${log_file}" | dialog \
         --clear \
         --title " Post Installation " \
         --programbox 22 90;
+
+    if [[ ${rc} -ne 0 ]]; then
+        if [[ -f /mnt/root/ArtixTUI/drivers-debug.log ]]; then
+            cp \
+                /mnt/root/ArtixTUI/drivers-debug.log \
+                /tmp/drivers-debug.log \
+                2>/dev/null \
+                || true;
+        fi
+
+        tui_msg \
+            " Post Installation Failed " \
+            "The post-install stage failed.
+
+Logs:
+- ${log_file}
+- /tmp/drivers-debug.log
+
+The installation was NOT marked complete.";
+
+        return "${rc}";
+    fi
 
     stage_mark_done post;
 }

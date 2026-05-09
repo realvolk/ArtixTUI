@@ -53,10 +53,25 @@ partition_disk() {
         swapoff -a 2>/dev/null || true;
         umount -R /mnt 2>/dev/null || true;
 
+        printf '[*] Cleaning old ZFS pools...\n';
+
+        zpool export -a 2>/dev/null || true;
+
         printf '[*] Wiping existing filesystem signatures...\n';
 
         wipefs --all --force "${disk}";
         sgdisk --zap-all "${disk}";
+
+        printf '[*] Clearing remaining partition metadata...\n';
+
+        dd if=/dev/zero \
+            of="${disk}" \
+            bs=1M \
+            count=32 \
+            conv=fsync \
+            status=none;
+
+        blockdev --rereadpt "${disk}" 2>/dev/null || true;
 
         printf '[*] Creating GPT partition layout...\n';
 
@@ -74,6 +89,7 @@ partition_disk() {
         if command -v partprobe &>/dev/null; then
             partprobe "${disk}";
         fi
+
         udevadm settle;
 
         sleep 2;

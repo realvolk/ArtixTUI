@@ -35,7 +35,14 @@ enable_service() {
     local svc="${1}";
     local init="${INIT:-openrc}";
 
-    service_exists "${svc}" || return 0;
+    if ! service_exists "${svc}"; then
+        printf '[!] Service not found for %s: %s\n' \
+            "${init}" \
+            "${svc}" \
+            >&2;
+
+        return 1;
+    fi
 
     case "${init}" in
         openrc)
@@ -43,6 +50,8 @@ enable_service() {
             ;;
 
         runit)
+            mkdir -p /etc/runit/runsvdir/default;
+
             ln -sf \
                 "/etc/runit/sv/${svc}" \
                 "/etc/runit/runsvdir/default/${svc}";
@@ -67,7 +76,14 @@ start_service() {
     local svc="${1}";
     local init="${INIT:-openrc}";
 
-    service_exists "${svc}" || return 0;
+    if ! service_exists "${svc}"; then
+        printf '[!] Service not found for %s: %s\n' \
+            "${init}" \
+            "${svc}" \
+            >&2;
+
+        return 1;
+    fi
 
     case "${init}" in
         openrc)

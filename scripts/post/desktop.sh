@@ -166,6 +166,16 @@ EOF
 
     case "${wm_de}" in
         hyprland|mango|niri|sway)
+            printf '[*] Verifying seatd service...\n'
+
+            if ! service_exists seatd; then
+                printf '[!] seatd service is missing for init: %s\n' \
+                    "${init}" \
+                    >&2;
+
+                return 1;
+            fi
+
             enable_service seatd
             ;;
     esac

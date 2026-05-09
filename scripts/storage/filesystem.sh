@@ -5,10 +5,13 @@ create_filesystems() {
     local disk;
     local fs_type;
     local swap_enabled;
+    local kernel_choice;
+    local kernel_headers='linux-headers';
 
     disk="$(state_get DISK)";
     fs_type="$(state_get FS_TYPE)";
     swap_enabled="$(state_get SWAP_ENABLED no)";
+    kernel_choice="$(state_get KERNEL_CHOICE linux)";
 
     local efi_part;
     local swap_part='';
@@ -22,6 +25,40 @@ create_filesystems() {
     else
         root_part=$(get_partition_name "${disk}" 2);
     fi
+
+    case "${kernel_choice}" in
+        linux)
+            kernel_headers='linux-headers'
+            ;;
+
+        linux-lts)
+            kernel_headers='linux-lts-headers'
+            ;;
+
+        linux-hardened)
+            kernel_headers='linux-hardened-headers'
+            ;;
+
+        linux-zen)
+            kernel_headers='linux-zen-headers'
+            ;;
+
+        linux-cachy|linux-cachyos)
+            if pacman -Si linux-cachyos-headers \
+                >/dev/null 2>&1; then
+
+                kernel_headers='linux-cachyos-headers'
+            elif pacman -Si linux-cachy-headers \
+                >/dev/null 2>&1; then
+
+                kernel_headers='linux-cachy-headers'
+            fi
+            ;;
+
+        xanmod)
+            kernel_headers='linux-xanmod-headers'
+            ;;
+    esac
 
     {
         printf '[*] Formatting EFI partition...\n';
@@ -93,6 +130,7 @@ or choose another filesystem." \
 
                 mkfs.bcachefs -f "${root_part}";
                 ;;
+
             exfat)
                 printf '[*] Creating exFAT filesystem...\n';
 
@@ -126,12 +164,18 @@ EOF
 
                 pacman -S --noconfirm \
                     dkms \
-                    linux-headers \
+                    "${kernel_headers}" \
                     zfs-dkms \
                     zfs-utils;
 
                 printf '[*] Creating ZFS pool...\n';
-                dkms install zfs/$(pacman -Q zfs-dkms | awk '{print $2}') || true;
+
+                zpool labelclear -f "${root_part}" \
+                    >/dev/null 2>&1 || true;
+
+                dkms install \
+                    zfs/"$(pacman -Q zfs-dkms | awk '{print $2}')" \
+                    || true;
 
                 modprobe zfs;
 

@@ -5,13 +5,16 @@ mount_filesystems() {
     local disk;
     local fs_type;
     local swap_enabled;
+    local bootloader;
 
     disk="$(state_get DISK)";
     fs_type="$(state_get FS_TYPE)";
     swap_enabled="$(state_get SWAP_ENABLED no)";
+    bootloader="$(state_get BOOTLOADER grub)";
 
     local efi_part;
     local root_part;
+    local efi_mount='/mnt/boot/efi';
 
     efi_part=$(get_partition_name "${disk}" 1);
 
@@ -19,6 +22,10 @@ mount_filesystems() {
         root_part=$(get_partition_name "${disk}" 3);
     else
         root_part=$(get_partition_name "${disk}" 2);
+    fi
+
+    if [[ "${bootloader}" == 'efistub' ]]; then
+        efi_mount='/mnt/boot'
     fi
 
     {
@@ -90,7 +97,7 @@ mount_filesystems() {
 
         mount --mkdir \
             "${efi_part}" \
-            /mnt/boot/efi;
+            "${efi_mount}";
 
         printf '\n[*] Mount setup completed.\n';
     } 2>&1 | dialog \

@@ -9,6 +9,7 @@ SCRIPT_DIR="${BASE_DIR}/scripts";
 
 source "${SCRIPT_DIR}/common.sh";
 source "${SCRIPT_DIR}/state.sh";
+source "${SCRIPT_DIR}/recovery.sh";
 
 source "${SCRIPT_DIR}/tui/core.sh";
 source "${SCRIPT_DIR}/tui/menus.sh";
@@ -86,6 +87,58 @@ extract_docblock() {
     parse_docblock "${docblock}";
 }
 
+self_update_installer() {
+    local repo_url;
+    local tmp_dir;
+
+    repo_url='https://github.com/realvolk/ArtixTUI.git';
+
+    tmp_dir="$(mktemp -d)";
+
+    printf '[*] Downloading latest installer...\n';
+
+    if ! git clone \
+        --depth 1 \
+        "${repo_url}" \
+        "${tmp_dir}" \
+        >/dev/null 2>&1; then
+
+        printf '[!] Failed to download latest installer.\n';
+
+        rm -rf "${tmp_dir}";
+
+        return 1;
+    fi
+
+    if [[ ! -f "${tmp_dir}/install" ]]; then
+        printf '[!] Invalid installer payload received.\n';
+
+        rm -rf "${tmp_dir}";
+
+        return 1;
+    fi
+
+    printf '[*] Replacing old installer files...\n';
+
+    find "${BASE_DIR}" \
+        -mindepth 1 \
+        -maxdepth 1 \
+        ! -name '.git' \
+        -exec rm -rf {} +;
+
+    cp -a \
+        "${tmp_dir}/." \
+        "${BASE_DIR}/";
+
+    chmod +x "${BASE_DIR}/install";
+
+    rm -rf "${tmp_dir}";
+
+    printf '[*] Restarting updated installer...\n';
+
+    exec "${BASE_DIR}/install" "$@";
+}
+
 check_installer_version() {
     local local_version;
     local remote_version;
@@ -109,36 +162,43 @@ check_installer_version() {
         || return 0;
 
     if [[ "${local_version}" != "${remote_version}" ]]; then
-        if ! tui_yesno \
+        if tui_yesno \
             " Installer Outdated " \
 "Installed version: ${local_version}
 Latest version: ${remote_version}
 
-This installer may contain bugs already fixed upstream.
+A newer installer version is available.
 
-It is strongly recommended to download
-the latest version before continuing.
+Would you like to update now?"; then
 
-Continue anyway?"; then
+            if self_update_installer "$@"; then
+                exit 0;
+            fi
 
-            clear;
-            printf '[*] Installation cancelled.\n';
-            exit 0;
+            if ! tui_yesno \
+                " Update Failed " \
+"The automatic update failed.
+
+Continue using the current installer anyway?"; then
+
+                clear;
+                printf '[*] Installation cancelled.\n';
+                exit 0;
+            fi
+
+        else
+            if ! tui_yesno \
+                " Continue Anyway " \
+"This installer may contain bugs already fixed upstream.
+
+Continue using the outdated version?"; then
+
+                clear;
+                printf '[*] Installation cancelled.\n';
+                exit 0;
+            fi
         fi
     fi
-}
-
-detect_partial_install() {
-    mountpoint -q /mnt \
-        || return 1;
-
-    [[ -d /mnt/etc ]] \
-        || return 1;
-
-    [[ -d /mnt/var/lib/pacman ]] \
-        || return 1;
-
-    return 0;
 }
 
 run_install_pipeline() {
@@ -182,7 +242,9 @@ resume_install() {
 }
 
 start_recovery_install() {
-    if ! detect_partial_install; then
+    local recovery_status;
+
+    if ! recovery_detect_install; then
         tui_msg \
             " Recovery Mode " \
             "No partial installation detected in /mnt."
@@ -190,9 +252,17 @@ start_recovery_install() {
         exit 1;
     fi
 
+    recovery_import_state;
+
+    recovery_status="$(
+        recovery_get_status
+    )";
+
     if ! tui_yesno \
         " Recovery Mode " \
 "Detected an existing installation mounted at /mnt.
+
+${recovery_status}
 
 This usually means a previous installation
 was interrupted or partially completed.
@@ -223,7 +293,7 @@ main() {
 
     require_root;
     require_efi;
-    check_installer_version;
+    check_installer_version "$@";
 
     while [[ $# -gt 0 ]]; do
         case "${1}" in
@@ -274,7 +344,7 @@ main() {
 
         set -x
     fi
-    
+
     case "${MODE}" in
         auto)
             start_auto_install;

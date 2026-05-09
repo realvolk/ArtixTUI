@@ -47,6 +47,7 @@ install_base_system() {
         dbus
 
         efibootmgr
+        dosfstools
     );
 
     case "${wm_de}" in
@@ -67,7 +68,7 @@ install_base_system() {
     case "${user_shell}" in
         bash)
             ;;
-        
+
         zsh)
             pkgs+=(zsh);
             ;;
@@ -164,9 +165,9 @@ EOF
             ;;
 
         linux-bazzite-bin)
-            if ! pacman -Q artix-archlinux-support >/dev/null 2>&1; then
-                printf '[*] Installing Arch repository support...\n';
+            printf '[*] Setting up Arch repositories for Bazzite kernel...\n';
 
+            if ! pacman -Q artix-archlinux-support >/dev/null 2>&1; then
                 pacman -Sy --noconfirm --needed \
                     artix-archlinux-support;
             fi
@@ -179,10 +180,19 @@ Include = /etc/pacman.d/mirrorlist-arch
 EOF
             fi
 
+            if ! grep -q '^\[multilib\]' /etc/pacman.conf; then
+                cat <<'EOF' >> /etc/pacman.conf
+
+[multilib]
+Include = /etc/pacman.d/mirrorlist-arch
+EOF
+            fi
+
             pacman -Sy --noconfirm;
 
             pkgs+=(
                 linux-bazzite-bin
+                linux-bazzite-bin-headers
             );
             ;;
 
@@ -320,10 +330,7 @@ EOF
             ;;
 
         exfat)
-            pkgs+=(
-                exfatprogs
-                dosfstools
-            );
+            pkgs+=(exfatprogs);
             ;;
 
         zfs)
@@ -433,7 +440,7 @@ EOF
 
             printf '[*] Synchronizing package databases...\n';
 
-            pacman -Sy;
+            pacman -Sy --noconfirm;
 
             printf '[*] Installing Arch Linux keyring...\n';
 
@@ -447,8 +454,10 @@ EOF
 
         debug_log="${PWD}/basestrap-debug.log";
 
+        : > "${debug_log}";
+
         printf '\n[*] Installing packages:\n' \
-            | tee "${debug_log}";
+            | tee -a "${debug_log}";
 
         printf '%s\n' "${pkgs[@]}" \
             | tee -a "${debug_log}";
@@ -468,10 +477,12 @@ EOF
             printf '[*] Compile manually after reboot with:\n';
             printf '    cd /opt/linux-tkg && ./install.sh\n\n';
         fi
-        
+
         printf '[*] Generating fstab...\n';
 
-        fstabgen -U /mnt >> /mnt/etc/fstab;
+        if [[ "${fs_type}" != 'zfs' ]]; then
+            fstabgen -U /mnt >> /mnt/etc/fstab;
+        fi
 
         printf '\n[*] Base system installation complete.\n';
     } 2>&1 | dialog \

@@ -79,6 +79,7 @@ install_drivers() {
     local wm_de;
     local kernel_choice;
     local rc=0;
+    local initramfs_tool='mkinitcpio';
 
     gpu_vendor="$(get_gpu_vendor)";
     gpu_info="$(get_gpu_info)";
@@ -107,6 +108,22 @@ install_drivers() {
 
         linux-zen)
             pkgs+=(linux-zen-headers)
+            ;;
+
+        linux-cachy|linux-cachyos)
+            if pacman -Si linux-cachyos-headers \
+                >/dev/null 2>&1; then
+
+                pkgs+=(linux-cachyos-headers)
+            elif pacman -Si linux-cachy-headers \
+                >/dev/null 2>&1; then
+
+                pkgs+=(linux-cachy-headers)
+            fi
+            ;;
+
+        linux-bazzite-bin|bazzite)
+            initramfs_tool='dracut'
             ;;
 
         xanmod)
@@ -148,7 +165,8 @@ install_drivers() {
     {
         printf '[*] GPU detected: %s\n' "${gpu_info:-Unknown}"
         printf '[*] Virtualization detected: %s\n' "${vm_type}"
-        printf '[*] Selected display stack: %s\n\n' "${x_stack}"
+        printf '[*] Selected display stack: %s\n' "${x_stack}"
+        printf '[*] Selected kernel: %s\n\n' "${kernel_choice}"
 
         if [[ "${vm_type}" != 'none' ]]; then
             printf '[*] Virtual machine detected. Installing guest drivers...\n\n'
@@ -276,14 +294,28 @@ install_drivers() {
         export LINES=24
         export TERM=dumb
 
-        pacman \
+        if ! pacman \
             --color=never \
             --noconfirm \
             --needed \
             -S \
-            "${pkgs[@]}"
+            "${pkgs[@]}"; then
 
-        rc=$?
+            rc=$?
+
+            printf '\n[!] Driver installation failed with exit code: %s\n' \
+                "${rc}"
+        fi
+
+        if [[ ${rc} -eq 0 && "${gpu_vendor}" == 'nvidia' ]]; then
+            printf '\n[*] Regenerating initramfs after NVIDIA installation...\n\n'
+
+            if [[ "${initramfs_tool}" == 'dracut' ]]; then
+                dracut --regenerate-all --force || rc=$?
+            else
+                mkinitcpio -P || rc=$?
+            fi
+        fi
 
         if [[ "${vm_type}" == 'kvm' || "${vm_type}" == 'qemu' ]]; then
             enable_service qemu-guest-agent
