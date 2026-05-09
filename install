@@ -86,6 +86,50 @@ extract_docblock() {
     parse_docblock "${docblock}";
 }
 
+check_installer_version() {
+    local local_version;
+    local remote_version;
+
+    [[ -f "${BASE_DIR}/VERSION" ]] \
+        || return 0;
+
+    local_version=$(
+        tr -d '[:space:]' < "${BASE_DIR}/VERSION"
+    );
+
+    remote_version=$(
+        curl -fsSL \
+            'https://raw.githubusercontent.com/realvolk/ArtixTUI/main/VERSION' \
+            2>/dev/null \
+            | tr -d '[:space:]' \
+            || true
+    );
+
+    [[ -n "${remote_version}" ]] \
+        || return 0;
+
+    if [[ "${local_version}" != "${remote_version}" ]]; then
+        if ! dialog \
+            --title " Installer Outdated " \
+            --yesno \
+"Installed version: ${local_version}
+Latest version: ${remote_version}
+
+This installer may contain bugs already fixed upstream.
+
+It is strongly recommended to download
+the latest version before continuing.
+
+Continue anyway?" \
+            13 72; then
+
+            clear;
+            printf '[*] Installation cancelled.\n';
+            exit 0;
+        fi
+    fi
+}
+
 run_install_pipeline() {
     stage_preflight;
     stage_storage;
@@ -139,6 +183,7 @@ main() {
 
     require_root;
     require_efi;
+    check_installer_version;
 
     while [[ $# -gt 0 ]]; do
         case "${1}" in
