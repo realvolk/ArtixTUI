@@ -64,14 +64,35 @@ create_filesystems() {
                 printf '[*] Ensuring Bcachefs tools are installed...\n';
 
                 if ! command -v mkfs.bcachefs >/dev/null 2>&1; then
-                    pacman -Sy --noconfirm bcachefs-tools;
+                    if tui_yesno \
+                        " Bcachefs Support " \
+                        "Bcachefs tools are not currently installed.\n\nTry installing them now?"; then
+
+                        printf '[*] Attempting to install Bcachefs tools...\n';
+
+                        pacman -Sy --noconfirm bcachefs-tools \
+                            || pacman -Sy --noconfirm bcachefs-tools-git \
+                            || true;
+                    fi
+                fi
+
+                if ! command -v mkfs.bcachefs >/dev/null 2>&1; then
+                    dialog \
+                        --title " Bcachefs Unsupported " \
+                        --msgbox \
+"Unable to install Bcachefs tools in the current live environment.
+
+Please use an ISO with Bcachefs support,
+or choose another filesystem." \
+                        10 70;
+
+                    return 1;
                 fi
 
                 printf '[*] Creating Bcachefs filesystem...\n';
 
                 mkfs.bcachefs -f "${root_part}";
                 ;;
-
             exfat)
                 printf '[*] Creating exFAT filesystem...\n';
 
@@ -104,11 +125,15 @@ EOF
                 printf '[*] Installing ZFS utilities...\n';
 
                 pacman -S --noconfirm \
+                    dkms \
+                    linux-headers \
+                    zfs-dkms \
                     zfs-utils;
 
                 printf '[*] Creating ZFS pool...\n';
+                dkms install zfs/$(pacman -Q zfs-dkms | awk '{print $2}') || true;
 
-                modprobe zfs || true;
+                modprobe zfs;
 
                 zpool create \
                     -f \

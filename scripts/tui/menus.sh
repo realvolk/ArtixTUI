@@ -63,6 +63,22 @@ tui_select_filesystem() {
 
     [[ -n "${fs}" ]] || return 1;
 
+    if [[ "${fs}" == 'zfs' ]]; then
+        if ! modinfo zfs >/dev/null 2>&1; then
+            dialog \
+                --title " ZFS Unsupported " \
+                --msgbox \
+"ZFS support is unavailable in the current live environment.
+
+The required ZFS kernel modules are not loaded or not present on this ISO.
+
+Please use a ZFS-enabled Artix environment or custom ISO build." \
+                12 70;
+
+            return 1;
+        fi
+    fi
+
     state_set FS_TYPE "${fs}";
 }
 

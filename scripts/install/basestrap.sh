@@ -9,6 +9,7 @@ install_base_system() {
     local network_stack;
     local user_shell;
     local display_manager;
+    local wm_de;
 
     init="$(state_get INIT)";
     kernel="$(state_get KERNEL_CHOICE linux)";
@@ -17,6 +18,7 @@ install_base_system() {
     network_stack="$(state_get NETWORK_STACK dhcpcd+iwd)";
     user_shell="$(state_get USER_SHELL bash)";
     display_manager="$(state_get DISPLAY_MANAGER none)";
+    wm_de="$(state_get WM_DE none)";
 
     local ucode='amd-ucode';
 
@@ -42,11 +44,25 @@ install_base_system() {
         "${ucode}"
         "${init}"
 
-        "elogind-${init}"
         dbus
 
         efibootmgr
     );
+
+    case "${wm_de}" in
+        hyprland|mango|niri|sway)
+            pkgs+=(
+                seatd
+                "seatd-${init}"
+            );
+            ;;
+
+        *)
+            pkgs+=(
+                "elogind-${init}"
+            );
+            ;;
+    esac;
 
     case "${user_shell}" in
         bash)
