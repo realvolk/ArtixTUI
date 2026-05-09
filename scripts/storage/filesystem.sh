@@ -61,6 +61,12 @@ create_filesystems() {
                 ;;
 
             bcachefs)
+                printf '[*] Ensuring Bcachefs tools are installed...\n';
+
+                if ! command -v mkfs.bcachefs >/dev/null 2>&1; then
+                    pacman -Sy --noconfirm bcachefs-tools;
+                fi
+
                 printf '[*] Creating Bcachefs filesystem...\n';
 
                 mkfs.bcachefs -f "${root_part}";
@@ -73,7 +79,36 @@ create_filesystems() {
                 ;;
 
             zfs)
+                printf '[*] Setting up OpenZFS repository...\n';
+
+                if ! grep -q '^\[archzfs\]' /etc/pacman.conf; then
+                    cat <<'EOF' >> /etc/pacman.conf
+
+[archzfs]
+Server = https://archzfs.com/$repo/x86_64
+EOF
+                fi
+
+                pacman-key --init;
+                pacman-key --populate artix;
+
+                pacman-key \
+                    --recv-keys F75D9D76 \
+                    --keyserver keyserver.ubuntu.com;
+
+                pacman-key \
+                    --lsign-key F75D9D76;
+
+                pacman -Sy --noconfirm;
+
+                printf '[*] Installing ZFS utilities...\n';
+
+                pacman -S --noconfirm \
+                    zfs-utils;
+
                 printf '[*] Creating ZFS pool...\n';
+
+                modprobe zfs || true;
 
                 zpool create \
                     -f \
@@ -85,11 +120,6 @@ create_filesystems() {
 
                 zfs create -o mountpoint=/ zroot/root;
                 ;;
-
-            *)
-                die "unsupported filesystem: ${fs_type}";
-                ;;
-        esac
 
         printf '\n[*] Filesystem creation complete.\n';
     } 2>&1 | dialog \

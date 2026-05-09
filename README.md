@@ -4,7 +4,8 @@ Modular TUI installer for Artix Linux.
 
 Designed for users who want a configurable Artix setup without manually performing every installation step.
 
-####  Version: v5.0.3
+####  Version: v5.0.3.2
+###### *(Version: Rewrite/Major Release, New Feature, Major bug fix, Minor bug fix/Hot fix)
 ---
 
 # Overview

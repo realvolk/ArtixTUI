@@ -192,12 +192,19 @@ EOF
 
             printf '[*] Setting up Chaotic-AUR for XanMod...\n';
 
+            pacman-key --init;
+            pacman-key --populate artix;
+
             pacman-key \
-                --recv-key FBA220DFC880C036 \
+                --recv-keys FBA220DFC880C036 \
                 --keyserver hkp://keyserver.ubuntu.com;
 
             pacman-key \
                 --lsign-key FBA220DFC880C036;
+
+            pacman -U --noconfirm \
+                'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst' \
+                'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst';
 
             if ! grep -q '^\[chaotic-aur\]' /etc/pacman.conf; then
                 cat <<'EOF' >> /etc/pacman.conf
@@ -206,10 +213,6 @@ EOF
 Include = /etc/pacman.d/chaotic-mirrorlist
 EOF
             fi
-
-            pacman -U --noconfirm \
-                'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst' \
-                'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst';
 
             pacman -Sy --noconfirm;
 
@@ -299,10 +302,34 @@ EOF
             ;;
 
         zfs)
-            printf '[*] Setting up ZFS repository support...\n';
+            printf '[*] Setting up OpenZFS repository...\n';
 
-            if ! grep -q '^\[extra\]' /etc/pacman.conf; then
+            if ! grep -q '^\[archzfs\]' /etc/pacman.conf; then
                 cat <<'EOF' >> /etc/pacman.conf
+
+[archzfs]
+Server = https://archzfs.com/$repo/x86_64
+EOF
+            fi
+
+            pacman-key \
+                --recv-keys F75D9D76 \
+                --keyserver hkp://keyserver.ubuntu.com;
+
+            pacman-key \
+                --lsign-key F75D9D76;
+
+            pacman -Sy --noconfirm;
+
+            pkgs+=(
+                dkms
+                zfs-dkms
+                zfs-utils
+            );
+
+            printf '\n[!] WARNING: ZFS support is experimental.\n';
+            printf '[!] DKMS rebuilds may be required after kernel updates.\n\n';
+            ;;
 
 [extra]
 Include = /etc/pacman.d/mirrorlist-arch

@@ -253,6 +253,53 @@ tui_select_luks() {
 }
 
 tui_select_arch_repos() {
+    local kernel;
+    local fs_type;
+    local wm_de;
+
+    kernel="$(state_get KERNEL_CHOICE linux)";
+    fs_type="$(state_get FS_TYPE ext4)";
+    wm_de="$(state_get WM_DE none)";
+
+    local required='no';
+    local reasons=();
+
+    case "${kernel}" in
+        linux-bazzite-bin|linux-cachyos-bore|xanmod)
+            required='yes';
+            reasons+=("Kernel '${kernel}' requires Arch repositories.");
+            ;;
+    esac
+
+    case "${fs_type}" in
+        zfs)
+            required='yes';
+            reasons+=("ZFS support depends on Arch repositories.");
+            ;;
+    esac
+
+    case "${wm_de}" in
+        hyprland|niri)
+            required='yes';
+            reasons+=("Selected Wayland environment may require Arch packages.");
+            ;;
+    esac
+
+    if [[ "${required}" == 'yes' ]]; then
+        dialog \
+            --title " Arch Repositories Required " \
+            --msgbox \
+"Official Arch repositories will be ENABLED automatically.
+
+Reasons:
+
+$(printf ' - %s\n' "${reasons[@]}")" \
+            15 70;
+
+        state_set ENABLE_ARCH_REPOS "yes";
+        return 0;
+    fi
+
     if tui_yesno \
         " Arch Repositories " \
         "Enable official Arch repositories?"; then
