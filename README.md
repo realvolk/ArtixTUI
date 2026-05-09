@@ -237,6 +237,7 @@ The installer can automatically self-update when a newer upstream version is det
 | `install` | Main installer entry point |
 | `scripts/common.sh` | Basic operations |
 | `scripts/state.sh` | Installer state management |
+| `scripts/recovery.sh` | Recovery options manager |
 | `scripts/tui/` | TUI framework and menus |
 | `scripts/stages/` | Installation stages |
 | `scripts/install/` | Base installation logic |
