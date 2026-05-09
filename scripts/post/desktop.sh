@@ -41,9 +41,36 @@ install_desktop() {
                 "seatd-${init}"
             )
             ;;
+
         mango)
+            printf '[*] Setting up Chaotic-AUR for MangoWM...\n';
+
+            pacman-key --init;
+            pacman-key --populate artix;
+
+            pacman-key \
+                --recv-keys FBA220DFC880C036 \
+                --keyserver hkp://keyserver.ubuntu.com;
+
+            pacman-key \
+                --lsign-key FBA220DFC880C036;
+
+            pacman -U --noconfirm \
+                'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst' \
+                'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst';
+
+            if ! grep -q '^\[chaotic-aur\]' /etc/pacman.conf; then
+                cat <<'EOF' >> /etc/pacman.conf
+
+[chaotic-aur]
+Include = /etc/pacman.d/chaotic-mirrorlist
+EOF
+            fi
+
+            pacman -Sy --noconfirm;
+
             pkgs+=(
-                mango
+                mangowm
                 foot
                 waybar
                 wofi
@@ -53,6 +80,7 @@ install_desktop() {
                 "seatd-${init}"
             )
             ;;
+
         niri)
             pkgs+=(
                 niri
