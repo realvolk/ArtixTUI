@@ -109,9 +109,8 @@ check_installer_version() {
         || return 0;
 
     if [[ "${local_version}" != "${remote_version}" ]]; then
-        if ! dialog \
-            --title " Installer Outdated " \
-            --yesno \
+        if ! tui_yesno \
+            " Installer Outdated " \
 "Installed version: ${local_version}
 Latest version: ${remote_version}
 
@@ -120,8 +119,7 @@ This installer may contain bugs already fixed upstream.
 It is strongly recommended to download
 the latest version before continuing.
 
-Continue anyway?" \
-            13 72; then
+Continue anyway?"; then
 
             clear;
             printf '[*] Installation cancelled.\n';
@@ -185,25 +183,21 @@ resume_install() {
 
 start_recovery_install() {
     if ! detect_partial_install; then
-        dialog \
-            --title " Recovery Mode " \
-            --msgbox \
-            "No partial installation detected in /mnt." \
-            8 50;
+        tui_msg \
+            " Recovery Mode " \
+            "No partial installation detected in /mnt."
 
         exit 1;
     fi
 
-    if ! dialog \
-        --title " Recovery Mode " \
-        --yesno \
+    if ! tui_yesno \
+        " Recovery Mode " \
 "Detected an existing installation mounted at /mnt.
 
 This usually means a previous installation
 was interrupted or partially completed.
 
-Attempt recovery and continue installation?" \
-        12 60; then
+Attempt recovery and continue installation?"; then
 
         clear;
         printf '[*] Recovery cancelled.\n';
