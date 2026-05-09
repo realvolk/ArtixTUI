@@ -41,7 +41,18 @@ install_desktop() {
                 "seatd-${init}"
             )
             ;;
+        mango)
+            pkgs+=(
+                mango
+                foot
+                waybar
+                wofi
+                xdg-desktop-portal-wlr
 
+                seatd
+                "seatd-${init}"
+            )
+            ;;
         niri)
             pkgs+=(
                 niri
@@ -120,7 +131,7 @@ install_desktop() {
     esac
 
     case "${wm_de}" in
-        hyprland|niri|sway)
+        hyprland|mango|niri|sway)
             enable_service seatd
             ;;
     esac

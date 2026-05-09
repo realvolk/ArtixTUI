@@ -116,6 +116,7 @@ tui_select_desktop() {
             "xfce4"    "XFCE Desktop" \
             "lxqt"     "LXQt Desktop" \
             "lxde"     "Lightweight LXDE desktop" \
+            "mango"    "Mango dynamic Wayland compositor" \
             "hyprland" "Hyprland Wayland compositor" \
             "niri"     "Scrollable tiling Wayland compositor" \
             "sway"     "i3-compatible Wayland compositor" \
