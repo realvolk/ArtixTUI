@@ -49,9 +49,10 @@ detect_vm() {
         2>/dev/null; then
 
         vm=$(
-            grep -oE \
+            grep -h -oE \
                 'vmware|qemu|kvm|oracle|virtualbox' \
                 /sys/class/dmi/id/product_name \
+                /sys/class/dmi/id/sys_vendor \
                 2>/dev/null \
                 | head -n1
         );
@@ -157,15 +158,19 @@ install_drivers() {
                     pkgs+=(
                         spice-vdagent
                         qemu-guest-agent
-                        xf86-video-qxl
                     )
+
+                    if [[ "${x_stack}" != 'xlibre' ]]; then
+                        pkgs+=(xf86-video-qxl)
+                    fi
                     ;;
 
                 vmware)
-                    pkgs+=(
-                        xf86-video-vmware
-                        open-vm-tools
-                    )
+                    pkgs+=(open-vm-tools)
+
+                    if [[ "${x_stack}" != 'xlibre' ]]; then
+                        pkgs+=(xf86-video-vmware)
+                    fi
                     ;;
 
                 oracle|virtualbox)
