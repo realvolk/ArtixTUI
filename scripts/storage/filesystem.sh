@@ -120,6 +120,7 @@ EOF
 
                 zfs create -o mountpoint=/ zroot/root;
                 ;;
+        esac
 
         printf '\n[*] Filesystem creation complete.\n';
     } 2>&1 | dialog \
