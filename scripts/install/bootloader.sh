@@ -82,7 +82,7 @@ configure_bootloader() {
                     "${esp_source}";
 
                 root_uuid="$(
-                    blkid -s UUID -o value "${root_source}"
+                    findmnt -rn -o UUID /mnt
                 )";
 
                 [[ -n "${root_uuid}" ]] \
