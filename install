@@ -215,12 +215,23 @@ Continue using the outdated version?"; then
 }
 
 run_install_pipeline() {
-    stage_preflight;
-    stage_storage;
-    stage_base;
-    stage_chroot;
-    stage_post;
-    stage_finalize;
+    stage_preflight \
+        || die 'preflight stage failed';
+
+    stage_storage \
+        || die 'storage stage failed';
+
+    stage_base \
+        || die 'base stage failed';
+
+    stage_chroot \
+        || die 'chroot stage failed';
+
+    stage_post \
+        || die 'post-install stage failed';
+
+    stage_finalize \
+        || die 'finalization stage failed';
 }
 
 start_auto_install() {
