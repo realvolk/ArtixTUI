@@ -56,7 +56,7 @@ state_get() {
 
 state_set() {
     ensure_state_dirs;
-    
+
     local key="${1}";
     local value="${2}";
 
@@ -95,6 +95,8 @@ stage_reset_all() {
 }
 
 stage_log_path() {
+    ensure_state_dirs;
+
     printf '%s/%s.log\n' \
         "${LOG_DIR}" \
         "${1}";
@@ -104,26 +106,41 @@ stage_require_mount() {
     mountpoint -q /mnt
 }
 
+stage_require_storage() {
+    stage_require_mount \
+        && [[ -d /mnt/etc ]] \
+        && (
+            mountpoint -q /mnt/boot \
+            || mountpoint -q /mnt/efi \
+            || [[ -f /mnt/etc/fstab ]]
+        )
+}
+
 stage_require_chroot() {
-    mountpoint -q /mnt \
+    stage_require_storage \
         && [[ -x /mnt/usr/bin/bash ]] \
         && [[ -f /mnt/etc/fstab ]]
 }
 
 stage_require_post() {
-    [[ -d /mnt/root ]]
+    stage_require_chroot \
+        && [[ -d /mnt/home || -d /mnt/root ]]
 }
 
 stage_validate() {
     local stage="${1}";
 
     case "${stage}" in
+        preflight)
+            return 0
+            ;;
+
         storage)
-            stage_require_mount
+            stage_require_storage
             ;;
 
         base)
-            stage_require_mount
+            stage_require_chroot
             ;;
 
         chroot)
@@ -131,7 +148,7 @@ stage_validate() {
             ;;
 
         post)
-            stage_require_chroot
+            stage_require_post
             ;;
 
         finalize)
@@ -139,7 +156,7 @@ stage_validate() {
             ;;
 
         *)
-            return 0
+            return 1
             ;;
     esac
 }
@@ -184,6 +201,9 @@ stage_should_skip() {
 
         return 1;
     fi
+
+    printf '[*] %s stage already completed. Skipping...\n' \
+        "${stage^}";
 
     return 0;
 }
