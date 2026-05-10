@@ -195,8 +195,11 @@ EOF
         sudo -u "${USER_NAME}" \
             bash -c "
                 cd '${build_dir}' &&
-                makepkg -si --noconfirm
+                makepkg -s --noconfirm
             ";
+
+        pacman -U --noconfirm \
+            "${build_dir}"/*.pkg.tar.*
 
         rm -rf "${build_dir}";
     fi
