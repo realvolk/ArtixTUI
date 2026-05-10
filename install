@@ -260,7 +260,14 @@ start_manual_install() {
 }
 
 resume_install() {
+    if [[ ! -f "${STATE_FILE}" ]]; then
+        die 'no saved installer state found';
+    fi
+
     state_load;
+
+    [[ -n "${DISK:-}" ]] \
+        || die 'saved installer state is incomplete';
 
     run_install_pipeline;
 }
