@@ -88,6 +88,7 @@ extract_docblock() {
 }
 
 self_update_installer() {
+    local -a restart_args=("$@");
     local repo_url;
     local tmp_dir;
 
@@ -136,7 +137,7 @@ self_update_installer() {
 
     printf '[*] Restarting updated installer...\n';
 
-    exec "${BASE_DIR}/install" "$@";
+    exec "${BASE_DIR}/install" "${restart_args[@]}";
 }
 
 check_installer_version() {
