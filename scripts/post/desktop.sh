@@ -45,8 +45,15 @@ install_desktop() {
         mango)
             printf '[*] Setting up Chaotic-AUR for MangoWM...\n';
 
+            if [[ "$(state_get ENABLE_ARCH_REPOS no)" == 'yes' ]]; then
+                printf '[*] Installing Arch Linux keyring...\n';
+
+                pacman -Sy --noconfirm archlinux-keyring
+            fi
+
             pacman-key --init
             pacman-key --populate artix archlinux
+
             # Now, you may ask, why the this? Simple, pacman likes to cache things. Corrupted packages are a big no-no.
             rm -f \
                 /var/cache/pacman/pkg/chaotic-keyring* \
