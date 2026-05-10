@@ -3,7 +3,6 @@ set -Eeuo pipefail;
 
 stage_chroot() {
     if stage_should_skip chroot; then
-        printf '[*] Chroot stage already completed. Skipping...\n';
         return 0;
     fi;
 
@@ -24,9 +23,10 @@ stage_chroot() {
 
     printf '[*] Installing init system: %s\n' "${init}";
 
-    if ! artix-chroot /mnt pacman -S --noconfirm "${init}"; then
-        rc=$?
+    artix-chroot /mnt pacman -S --noconfirm "${init}";
+    rc=$?
 
+    if [[ ${rc} -ne 0 ]]; then
         printf '[!] Failed to install init system: %s\n' \
             "${init}" \
             >&2;

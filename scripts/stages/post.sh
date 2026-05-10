@@ -3,7 +3,6 @@ set -Eeuo pipefail;
 
 stage_post() {
     if stage_should_skip post; then
-        printf '[*] Post-install stage already completed. Skipping...\n';
         return 0;
     fi;
 
@@ -36,7 +35,7 @@ stage_post() {
 
         printf '[*] Entering chroot environment...\n';
 
-        if ! artix-chroot /mnt /bin/bash <<EOF
+        artix-chroot /mnt /bin/bash <<EOF
 set -Eeuo pipefail
 
 export INIT="${init}"
@@ -74,8 +73,10 @@ install_extras
 
 printf '\n[✓] Post-install configuration complete.\n'
 EOF
-        then
-            rc=$?
+
+        rc=$?
+
+        if [[ ${rc} -ne 0 ]]; then
             printf '\n[!] Post-install stage failed with exit code: %s\n' "${rc}"
         fi
 
@@ -105,6 +106,8 @@ The installation was NOT marked complete.";
 
         return "${rc}";
     fi
+
+    touch /mnt/root/.artix-post-complete
 
     stage_mark_done post;
 }

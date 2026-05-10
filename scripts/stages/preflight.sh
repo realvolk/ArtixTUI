@@ -3,7 +3,6 @@ set -Eeuo pipefail;
 
 stage_preflight() {
     if stage_should_skip preflight; then
-        printf '[*] Preflight stage already completed. Skipping...\n';
         return 0;
     fi;
 

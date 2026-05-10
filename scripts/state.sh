@@ -136,19 +136,19 @@ stage_validate() {
             ;;
 
         storage)
-            stage_require_storage
+            stage_require_mount
             ;;
 
         base)
-            stage_require_chroot
+            [[ -x /mnt/usr/bin/bash ]]
             ;;
 
         chroot)
-            stage_require_chroot
+            [[ -f /mnt/etc/fstab ]]
             ;;
 
         post)
-            stage_require_post
+            [[ -d /mnt/home || -d /mnt/root ]]
             ;;
 
         finalize)

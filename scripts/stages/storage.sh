@@ -3,7 +3,6 @@ set -Eeuo pipefail;
 
 stage_storage() {
     if stage_should_skip storage; then
-        printf '[*] Storage stage already completed. Skipping...\n';
         return 0;
     fi;
 
