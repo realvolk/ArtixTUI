@@ -66,6 +66,12 @@ install_desktop() {
             pacman-key \
                 --lsign-key 3056513887B78AEB
 
+            printf '[*] Installing Chaotic-AUR bootstrap packages...\n';
+
+            pacman -U --noconfirm \
+                'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst' \
+                'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst'
+
             if ! grep -q '^\[chaotic-aur\]' /etc/pacman.conf; then
                 cat <<'EOF' >> /etc/pacman.conf
 
@@ -73,12 +79,6 @@ install_desktop() {
 Include = /etc/pacman.d/chaotic-mirrorlist
 EOF
             fi
-
-            pacman -Sy --noconfirm
-
-            pacman -S --noconfirm --needed \
-                chaotic-keyring \
-                chaotic-mirrorlist
 
             pacman -Sy --noconfirm
 
