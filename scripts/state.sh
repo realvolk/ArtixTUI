@@ -1,18 +1,22 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail;
 
-readonly STATE_ROOT="/tmp/artix-installer";
+readonly STATE_ROOT="/mnt/var/lib/artix-installer";
 readonly STATE_FILE="${STATE_ROOT}/state.conf";
 
 readonly STAGE_DIR="${STATE_ROOT}/stages";
 readonly LOG_DIR="${STATE_ROOT}/logs";
 
-mkdir -p \
-    "${STATE_ROOT}" \
-    "${STAGE_DIR}" \
-    "${LOG_DIR}";
+ensure_state_dirs() {
+    mkdir -p \
+        "${STATE_ROOT}" \
+        "${STAGE_DIR}" \
+        "${LOG_DIR}";
+}
 
 state_save() {
+    ensure_state_dirs;
+
     cat <<EOF > "${STATE_FILE}"
 DISK="${DISK:-}"
 FS_TYPE="${FS_TYPE:-}"
@@ -51,6 +55,8 @@ state_get() {
 }
 
 state_set() {
+    ensure_state_dirs;
+    
     local key="${1}";
     local value="${2}";
 
@@ -71,6 +77,8 @@ state_set() {
 }
 
 stage_mark_done() {
+    ensure_state_dirs;
+
     touch "${STAGE_DIR}/${1}.done";
 }
 
@@ -138,47 +146,25 @@ stage_validate() {
 
 stage_reset_from() {
     local stage="${1}";
+    local reset='false';
+    local current;
 
-    case "${stage}" in
-        preflight)
-            stage_reset preflight
-            stage_reset storage
-            stage_reset base
-            stage_reset chroot
-            stage_reset post
-            stage_reset finalize
-            ;;
+    for current in \
+        preflight \
+        storage \
+        base \
+        chroot \
+        post \
+        finalize; do
 
-        storage)
-            stage_reset storage
-            stage_reset base
-            stage_reset chroot
-            stage_reset post
-            stage_reset finalize
-            ;;
+        if [[ "${current}" == "${stage}" ]]; then
+            reset='true';
+        fi
 
-        base)
-            stage_reset base
-            stage_reset chroot
-            stage_reset post
-            stage_reset finalize
-            ;;
-
-        chroot)
-            stage_reset chroot
-            stage_reset post
-            stage_reset finalize
-            ;;
-
-        post)
-            stage_reset post
-            stage_reset finalize
-            ;;
-
-        finalize)
-            stage_reset finalize
-            ;;
-    esac
+        if [[ "${reset}" == 'true' ]]; then
+            stage_reset "${current}";
+        fi
+    done
 }
 
 stage_should_skip() {
