@@ -147,24 +147,37 @@ check_installer_version() {
     [[ -f "${BASE_DIR}/VERSION" ]] \
         || return 0;
 
-    local_version=$(
+    local_version="$(
         tr -d '[:space:]' < "${BASE_DIR}/VERSION"
-    );
+    )";
 
-    remote_version=$(
+    remote_version="$(
         curl -fsSL \
             'https://raw.githubusercontent.com/realvolk/ArtixTUI/main/VERSION' \
             2>/dev/null \
             | tr -d '[:space:]' \
             || true
-    );
+    )";
 
     [[ -n "${remote_version}" ]] \
         || return 0;
 
-    if [[ "${local_version}" != "${remote_version}" ]]; then
-        if tui_yesno \
-            " Installer Outdated " \
+    if [[ "${local_version}" == "${remote_version}" ]]; then
+        return 0;
+    fi
+
+    if [[ "$(
+        printf '%s\n%s\n' \
+            "${local_version}" \
+            "${remote_version}" \
+            | sort -V \
+            | tail -n1
+    )" != "${remote_version}" ]]; then
+        return 0;
+    fi
+
+    if tui_yesno \
+        " Installer Outdated " \
 "Installed version: ${local_version}
 Latest version: ${remote_version}
 
@@ -172,32 +185,31 @@ A newer installer version is available.
 
 Would you like to update now?"; then
 
-            if self_update_installer "$@"; then
-                exit 0;
-            fi
+        if self_update_installer "$@"; then
+            exit 0;
+        fi
 
-            if ! tui_yesno \
-                " Update Failed " \
+        if ! tui_yesno \
+            " Update Failed " \
 "The automatic update failed.
 
 Continue using the current installer anyway?"; then
 
-                clear;
-                printf '[*] Installation cancelled.\n';
-                exit 0;
-            fi
+            clear;
+            printf '[*] Installation cancelled.\n';
+            exit 0;
+        fi
 
-        else
-            if ! tui_yesno \
-                " Continue Anyway " \
+    else
+        if ! tui_yesno \
+            " Continue Anyway " \
 "This installer may contain bugs already fixed upstream.
 
 Continue using the outdated version?"; then
 
-                clear;
-                printf '[*] Installation cancelled.\n';
-                exit 0;
-            fi
+            clear;
+            printf '[*] Installation cancelled.\n';
+            exit 0;
         fi
     fi
 }
