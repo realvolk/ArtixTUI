@@ -7,6 +7,41 @@ SELF_PATH="$(readlink -f "${BASH_SOURCE[0]}")";
 BASE_DIR="${SELF_PATH%/*}";
 SCRIPT_DIR="${BASE_DIR}/scripts";
 
+installer_abort() {
+    clear;
+
+    printf '\n[!] Installation interrupted.\n' >&2;
+    printf '[!] The installation was NOT completed.\n' >&2;
+
+    exit 130;
+}
+
+installer_error() {
+    local rc="${1:-1}";
+    local line="${2:-unknown}";
+
+    clear;
+
+    printf '\n[!] Installation failed at line: %s\n' \
+        "${line}" \
+        >&2;
+
+    printf '[!] Exit status: %s\n' \
+        "${rc}" \
+        >&2;
+
+    printf '[!] The installation was NOT completed.\n' >&2;
+
+    exit "${rc}";
+}
+
+trap 'installer_abort' INT TERM;
+trap 'installer_error $? ${LINENO}' ERR;
+
+SELF_PATH="$(readlink -f "${BASH_SOURCE[0]}")";
+BASE_DIR="${SELF_PATH%/*}";
+SCRIPT_DIR="${BASE_DIR}/scripts";
+
 source "${SCRIPT_DIR}/common.sh";
 source "${SCRIPT_DIR}/state.sh";
 source "${SCRIPT_DIR}/recovery.sh";

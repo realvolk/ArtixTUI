@@ -29,6 +29,13 @@ stage_finalize() {
         return 0;
     fi;
 
+    if ! stage_is_done post; then
+        printf '[!] Post-install stage did not complete.\n' >&2;
+        printf '[!] Refusing to finalize installation.\n' >&2;
+
+        return 1;
+    fi
+
     dialog \
         --clear \
         --title " Finalization " \
@@ -36,9 +43,17 @@ stage_finalize() {
         "Applying final system configuration..." \
         5 50;
 
-    _finalize_sync;
-    _finalize_unmount;
-    _finalize_success_dialog;
+    if ! _finalize_sync; then
+        printf '[!] Failed to sync filesystem buffers.\n' >&2;
+        return 1;
+    fi
+
+    if ! _finalize_unmount; then
+        printf '[!] Failed to unmount installation target.\n' >&2;
+        return 1;
+    fi
 
     stage_mark_done finalize;
+
+    _finalize_success_dialog;
 }
