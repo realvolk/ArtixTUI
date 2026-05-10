@@ -99,7 +99,7 @@ configure_bootloader() {
                 esp_disk="/dev/${esp_disk}";
 
                 esp_part="$(
-                    lsblk -no PARTNUM "${esp_source}" \
+                    lsblk -no PARTN "${esp_source}" \
                         | head -n1
                 )";
 
