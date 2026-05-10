@@ -122,6 +122,35 @@ extract_docblock() {
     parse_docblock "${docblock}";
 }
 
+validate_mode_flags() {
+    local mode_count=0;
+
+    [[ "${MODE}" == 'auto' ]] \
+        && ((mode_count++));
+
+    [[ "${MODE}" == 'manual' ]] \
+        && ((mode_count++));
+
+    [[ "${MODE}" == 'resume' ]] \
+        && ((mode_count++));
+
+    [[ "${MODE}" == 'recovery' ]] \
+        && ((mode_count++));
+
+    if (( mode_count > 1 )); then
+        printf '[!] Conflicting installation mode flags detected.\n' \
+            >&2;
+
+        printf '[!] Use only ONE of:\n' >&2;
+        printf '    -a / --auto\n' >&2;
+        printf '    -m / --manual\n' >&2;
+        printf '    -r / --resume\n' >&2;
+        printf '    -rr / --recovery\n' >&2;
+
+        exit 1;
+    fi
+}
+
 self_update_installer() {
     local -a restart_args=("$@");
     local repo_url;
@@ -364,21 +393,33 @@ main() {
     while [[ $# -gt 0 ]]; do
         case "${1}" in
             -a|--auto)
+                [[ -n "${MODE}" ]] \
+                    && die 'conflicting installation mode flags';
+
                 MODE='auto';
                 shift;
                 ;;
 
             -m|--manual)
+                [[ -n "${MODE}" ]] \
+                    && die 'conflicting installation mode flags';
+
                 MODE='manual';
                 shift;
                 ;;
 
             -r|--resume)
+                [[ -n "${MODE}" ]] \
+                    && die 'conflicting installation mode flags';
+
                 MODE='resume';
                 shift;
                 ;;
 
             -rr|--recovery)
+                [[ -n "${MODE}" ]] \
+                    && die 'conflicting installation mode flags';
+
                 MODE='recovery';
                 shift;
                 ;;
@@ -399,6 +440,8 @@ main() {
                 ;;
         esac;
     done;
+
+    validate_mode_flags;
 
     if [[ "${DEBUG}" == 'true' ]]; then
         export ARTIX_DEBUG='true';

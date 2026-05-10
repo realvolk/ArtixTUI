@@ -195,7 +195,7 @@ EOF
         sudo -u "${USER_NAME}" \
             bash -c "
                 cd '${build_dir}' &&
-                makepkg -s --noconfirm
+                makepkg --noconfirm
             ";
 
         pacman -U --noconfirm \

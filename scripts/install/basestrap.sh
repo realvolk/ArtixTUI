@@ -481,7 +481,7 @@ EOF
         printf '[*] Generating fstab...\n';
 
         if [[ "${fs_type}" != 'zfs' ]]; then
-            fstabgen -U /mnt >> /mnt/etc/fstab;
+            fstabgen -U /mnt > /mnt/etc/fstab;
         fi
 
         printf '\n[*] Base system installation complete.\n';
