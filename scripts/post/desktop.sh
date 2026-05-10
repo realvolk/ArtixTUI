@@ -8,6 +8,14 @@ install_desktop() {
     init="${INIT:-openrc}";
     display_manager="${DISPLAY_MANAGER:-none}";
 
+    if [[ "${wm_de}" == 'kde' ]] \
+        && [[ "${display_manager}" == 'none' ]]; then
+
+        printf '[*] KDE detected, defaulting to SDDM...\n';
+
+        display_manager='sddm';
+    fi
+
     case "${wm_de}" in
         xfce4)
             pkgs+=(
@@ -22,6 +30,13 @@ install_desktop() {
             )
             ;;
 
+        kde)
+            pkgs+=(
+                plasma
+                kde-applications
+                xdg-desktop-portal-kde
+            )
+            ;;
         lxde)
             pkgs+=(
                 lxde

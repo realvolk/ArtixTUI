@@ -131,6 +131,7 @@ tui_select_desktop() {
             "Select desktop environment:" \
             "xfce4"    "XFCE Desktop" \
             "lxqt"     "LXQt Desktop" \
+            "kde"      "KDE Plasma desktop" \
             "lxde"     "Lightweight LXDE desktop" \
             "mango"    "Mango dynamic Wayland compositor" \
             "hyprland" "Hyprland Wayland compositor" \
