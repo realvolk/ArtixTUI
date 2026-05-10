@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail;
 
-readonly STATE_ROOT="/mnt/var/lib/artix-installer";
+readonly STATE_ROOT="/tmp/artix-installer";
 readonly STATE_FILE="${STATE_ROOT}/state.conf";
 
 readonly STAGE_DIR="${STATE_ROOT}/stages";
