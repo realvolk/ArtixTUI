@@ -88,6 +88,10 @@ Supported filesystems:
 - exFAT
 - ZFS
 
+Filesystem utilities and kernel modules required by the selected filesystem
+(e.g. `f2fs-tools`, `dosfstools`, `xfsprogs`, etc.)
+are automatically handled inside the live environment when needed.
+
 ---
 
 ## GPU Driver Detection
@@ -189,6 +193,11 @@ Optional extras menu includes:
 - Internet connection
 - UEFI boot mode
 - Git
+
+Some advanced filesystem or kernel combinations may require temporary
+package installation inside the live environment.
+
+ArtixTUI attempts to handle this automatically.
 
 ---
 
@@ -304,7 +313,9 @@ I am the sole maintainer.
 - Some custom kernels may require additional repositories.
 - ZFS support depends on matching kernel headers.
 - EFIStub installations require proper UEFI firmware support.
-
+- DKMS-based kernel/module combinations may increase installation time.
+- Some filesystem combinations may require additional live-environment tooling.
+- Eventually, some combinations WILL break the script. That is normal behavior. You should report the bug(s) so they may be fixed.
 ---
 
 # Self-Updater Notice
