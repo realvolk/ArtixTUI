@@ -83,7 +83,6 @@ EOF
             pacman -Sy --noconfirm
 
             pkgs+=(
-                mangowm
                 foot
                 waybar
                 wofi
@@ -91,6 +90,9 @@ EOF
 
                 seatd
                 "seatd-${init}"
+
+                base-devel
+                git
             )
             ;;
 
@@ -160,6 +162,29 @@ EOF
         --noconfirm \
         --needed \
         "${pkgs[@]}";
+
+    if [[ "${wm_de}" == 'mango' ]]; then
+        printf '[*] Building MangoWM from AUR...\n';
+
+        local build_dir='/tmp/mangowm-git';
+
+        rm -rf "${build_dir}";
+
+        git clone \
+            'https://aur.archlinux.org/mangowm-git.git' \
+            "${build_dir}";
+
+        chown -R "${USER_NAME}:${USER_NAME}" \
+            "${build_dir}";
+
+        sudo -u "${USER_NAME}" \
+            bash -c "
+                cd '${build_dir}' &&
+                makepkg -si --noconfirm
+            ";
+
+        rm -rf "${build_dir}";
+    fi
 
     case "${display_manager}" in
         lightdm)
