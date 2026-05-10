@@ -126,16 +126,16 @@ validate_mode_flags() {
     local mode_count=0;
 
     [[ "${MODE}" == 'auto' ]] \
-        && ((mode_count++));
+        && ((++mode_count));
 
     [[ "${MODE}" == 'manual' ]] \
-        && ((mode_count++));
+        && ((++mode_count))
 
     [[ "${MODE}" == 'resume' ]] \
-        && ((mode_count++));
+        && ((++mode_count))
 
     [[ "${MODE}" == 'recovery' ]] \
-        && ((mode_count++));
+        && ((++mode_count))
 
     if (( mode_count > 1 )); then
         printf '[!] Conflicting installation mode flags detected.\n' \
