@@ -108,7 +108,7 @@ EOF
             /mnt/usr/local/lib/artix-installer;
 
         cp -r \
-            "${script_dir}/../post" \
+            "${script_dir}/../post/." \
             /mnt/usr/local/lib/artix-installer/post;
 
         cp \

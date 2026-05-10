@@ -37,6 +37,7 @@ install_desktop() {
                 xdg-desktop-portal-kde
             )
             ;;
+
         lxde)
             pkgs+=(
                 lxde
@@ -63,29 +64,51 @@ install_desktop() {
             if [[ "$(state_get ENABLE_ARCH_REPOS no)" == 'yes' ]]; then
                 printf '[*] Installing Arch Linux keyring...\n';
 
-                pacman -Sy --noconfirm archlinux-keyring
+                if ! pacman -Sy --noconfirm archlinux-keyring; then
+                    printf '[!] Failed to install Arch Linux keyring.\n' >&2;
+                    return 1;
+                fi
             fi
 
-            pacman-key --init
-            pacman-key --populate artix archlinux
+            if ! pacman-key --init; then
+                printf '[!] Failed to initialize pacman keys.\n' >&2;
+                return 1;
+            fi
+
+            if ! pacman-key --populate artix archlinux; then
+                printf '[!] Failed to populate pacman keys.\n' >&2;
+                return 1;
+            fi
 
             # Now, you may ask, why the this? Simple, pacman likes to cache things. Corrupted packages are a big no-no.
             rm -f \
                 /var/cache/pacman/pkg/chaotic-keyring* \
                 /var/cache/pacman/pkg/chaotic-mirrorlist*
 
-            pacman-key \
+            if ! pacman-key \
                 --recv-key 3056513887B78AEB \
-                --keyserver hkp://keyserver.ubuntu.com
+                --keyserver hkp://keyserver.ubuntu.com; then
 
-            pacman-key \
-                --lsign-key 3056513887B78AEB
+                printf '[!] Failed to receive Chaotic-AUR signing key.\n' >&2;
+                return 1;
+            fi
+
+            if ! pacman-key \
+                --lsign-key 3056513887B78AEB; then
+
+                printf '[!] Failed to locally sign Chaotic-AUR key.\n' >&2;
+                return 1;
+            fi
 
             printf '[*] Installing Chaotic-AUR bootstrap packages...\n';
 
-            pacman -U --noconfirm \
+            if ! pacman -U --noconfirm \
                 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst' \
-                'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst'
+                'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst'; then
+
+                printf '[!] Failed to install Chaotic-AUR bootstrap packages.\n' >&2;
+                return 1;
+            fi
 
             if ! grep -q '^\[chaotic-aur\]' /etc/pacman.conf; then
                 cat <<'EOF' >> /etc/pacman.conf
@@ -95,7 +118,10 @@ Include = /etc/pacman.d/chaotic-mirrorlist
 EOF
             fi
 
-            pacman -Syu --noconfirm
+            if ! pacman -Syu --noconfirm; then
+                printf '[!] Failed to synchronize packages for Chaotic-AUR.\n' >&2;
+                return 1;
+            fi
 
             pkgs+=(
                 foot
@@ -173,10 +199,14 @@ EOF
 
     printf '[*] Installing desktop environment...\n';
 
-    pacman -S \
+    if ! pacman -S \
         --noconfirm \
         --needed \
-        "${pkgs[@]}";
+        "${pkgs[@]}"; then
+
+        printf '[!] Failed to install desktop packages.\n' >&2;
+        return 1;
+    fi
 
     if [[ "${wm_de}" == 'mango' ]]; then
         printf '[*] Building MangoWM from AUR...\n';
@@ -185,21 +215,32 @@ EOF
 
         rm -rf "${build_dir}";
 
-        git clone \
+        if ! git clone \
             'https://aur.archlinux.org/mangowm-git.git' \
-            "${build_dir}";
+            "${build_dir}"; then
+
+            printf '[!] Failed to clone MangoWM repository.\n' >&2;
+            return 1;
+        fi
 
         chown -R "${USER_NAME}:${USER_NAME}" \
             "${build_dir}";
 
-        sudo -u "${USER_NAME}" \
-            bash -c "
-                cd '${build_dir}' &&
-                makepkg --noconfirm
-            ";
+        if ! su - "${USER_NAME}" -c "
+            cd '${build_dir}' &&
+            makepkg --noconfirm
+        "; then
 
-        pacman -U --noconfirm \
-            "${build_dir}"/*.pkg.tar.*
+            printf '[!] Failed to build MangoWM package.\n' >&2;
+            return 1;
+        fi
+
+        if ! pacman -U --noconfirm \
+            "${build_dir}"/*.pkg.tar.*; then
+
+            printf '[!] Failed to install MangoWM package.\n' >&2;
+            return 1;
+        fi
 
         rm -rf "${build_dir}";
     fi

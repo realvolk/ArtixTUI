@@ -294,13 +294,15 @@ install_drivers() {
         export LINES=24
         export TERM=dumb
 
-        if ! pacman \
+        if pacman \
             --color=never \
             --noconfirm \
             --needed \
             -S \
             "${pkgs[@]}"; then
 
+            rc=0
+        else
             rc=$?
 
             printf '\n[!] Driver installation failed with exit code: %s\n' \

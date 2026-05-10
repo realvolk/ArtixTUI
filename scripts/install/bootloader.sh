@@ -19,21 +19,33 @@ configure_bootloader() {
             grub)
                 printf '[*] Installing GRUB...\n';
 
-                artix-chroot /mnt grub-install \
+                if ! findmnt -rn /mnt/boot/efi >/dev/null 2>&1; then
+                    die 'EFI partition is not mounted at /boot/efi';
+                fi
+
+                if ! artix-chroot /mnt grub-install \
                     --target=x86_64-efi \
                     --efi-directory=/boot/efi \
-                    --bootloader-id=ARTIX;
+                    --bootloader-id=ARTIX; then
+
+                    die 'grub-install failed';
+                fi
 
                 printf '[*] Generating GRUB configuration...\n';
 
-                artix-chroot /mnt grub-mkconfig \
-                    -o /boot/grub/grub.cfg;
+                if ! artix-chroot /mnt grub-mkconfig \
+                    -o /boot/grub/grub.cfg; then
+
+                    die 'grub-mkconfig failed';
+                fi
                 ;;
 
             refind)
                 printf '[*] Installing rEFInd...\n';
 
-                artix-chroot /mnt refind-install;
+                if ! artix-chroot /mnt refind-install; then
+                    die 'refind-install failed';
+                fi
                 ;;
 
             efistub)
@@ -50,6 +62,7 @@ configure_bootloader() {
                 local loader;
                 local kernel_basename;
                 local initramfs_basename;
+                local esp_artix_dir;
 
                 printf '[*] Configuring EFIStub boot entry...\n';
 
@@ -57,6 +70,13 @@ configure_bootloader() {
 
                 [[ -n "${root_source}" ]] \
                     || die 'failed to detect root partition';
+
+                root_uuid="$(
+                    blkid -s UUID -o value "${root_source}"
+                )";
+
+                [[ -n "${root_uuid}" ]] \
+                    || die 'failed to detect root UUID';
 
                 for esp_mount in \
                     /mnt/boot/efi \
@@ -80,13 +100,6 @@ configure_bootloader() {
 
                 printf '[*] EFI partition source: %s\n' \
                     "${esp_source}";
-
-                root_uuid="$(
-                    findmnt -rn -o UUID /mnt
-                )";
-
-                [[ -n "${root_uuid}" ]] \
-                    || die 'failed to detect root UUID';
 
                 esp_disk="$(
                     lsblk -no PKNAME "${esp_source}" \
@@ -134,35 +147,33 @@ configure_bootloader() {
                 kernel_basename="$(basename "${kernel_image}")";
                 initramfs_basename="$(basename "${initramfs_image}")";
 
-                if [[ "${esp_mount}" != '/mnt/boot' ]]; then
-                    printf '[*] Copying kernel artifacts to EFI partition...\n';
+                esp_artix_dir="${esp_mount}/EFI/Artix";
 
-                    cp -f "${kernel_image}" \
-                        "${esp_mount}/${kernel_basename}";
+                printf '[*] Preparing EFI directory...\n';
 
-                    cp -f "${initramfs_image}" \
-                        "${esp_mount}/${initramfs_basename}";
+                mkdir -p "${esp_artix_dir}";
 
-                    if [[ -f /mnt/boot/intel-ucode.img ]]; then
-                        cp -f /mnt/boot/intel-ucode.img \
-                            "${esp_mount}/intel-ucode.img";
+                printf '[*] Copying kernel artifacts to EFI partition...\n';
 
-                        microcode_image='initrd=\intel-ucode.img'
-                    elif [[ -f /mnt/boot/amd-ucode.img ]]; then
-                        cp -f /mnt/boot/amd-ucode.img \
-                            "${esp_mount}/amd-ucode.img";
+                cp -f "${kernel_image}" \
+                    "${esp_artix_dir}/${kernel_basename}";
 
-                        microcode_image='initrd=\amd-ucode.img'
-                    fi
-                else
-                    if [[ -f /mnt/boot/intel-ucode.img ]]; then
-                        microcode_image='initrd=\intel-ucode.img'
-                    elif [[ -f /mnt/boot/amd-ucode.img ]]; then
-                        microcode_image='initrd=\amd-ucode.img'
-                    fi
+                cp -f "${initramfs_image}" \
+                    "${esp_artix_dir}/${initramfs_basename}";
+
+                if [[ -f /mnt/boot/intel-ucode.img ]]; then
+                    cp -f /mnt/boot/intel-ucode.img \
+                        "${esp_artix_dir}/intel-ucode.img";
+
+                    microcode_image='initrd=\EFI\Artix\intel-ucode.img'
+                elif [[ -f /mnt/boot/amd-ucode.img ]]; then
+                    cp -f /mnt/boot/amd-ucode.img \
+                        "${esp_artix_dir}/amd-ucode.img";
+
+                    microcode_image='initrd=\EFI\Artix\amd-ucode.img'
                 fi
 
-                loader="\\${kernel_basename}"
+                loader="\\EFI\\Artix\\${kernel_basename}"
 
                 cmdline="root=UUID=${root_uuid} rw"
 
@@ -170,7 +181,7 @@ configure_bootloader() {
                     cmdline+=" ${microcode_image}"
                 fi
 
-                cmdline+=" initrd=\\${initramfs_basename}"
+                cmdline+=" initrd=\\EFI\\Artix\\${initramfs_basename}"
 
                 printf '[*] Kernel image: %s\n' \
                     "${kernel_basename}";
@@ -180,14 +191,17 @@ configure_bootloader() {
 
                 printf '[*] Creating EFI boot entry...\n';
 
-                artix-chroot /mnt efibootmgr \
+                if ! artix-chroot /mnt efibootmgr \
                     --create \
                     --disk "${esp_disk}" \
                     --part "${esp_part}" \
                     --label 'Artix Linux' \
                     --loader "${loader}" \
                     --unicode "${cmdline}" \
-                    --verbose;
+                    --verbose; then
+
+                    die 'failed to create EFI boot entry';
+                fi
 
                 printf '[*] Verifying EFI boot entries...\n';
 
