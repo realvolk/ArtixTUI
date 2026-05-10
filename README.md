@@ -1,30 +1,27 @@
 # ArtixTUI - Artix Linux TUI Installer
 
-Modular TUI installer for Artix Linux.
+Modular TUI installer for Artix Linux.  
 
 Designed for users who want a configurable Artix setup without manually performing every installation step.
 
-#### Version: v6.2.2.1.
-###### *(Version: Rewrite/Major Release, New Feature, Major bug fix, Minor bug fix/Hot fix)*
+#### Version: v6.2.2.1  
+*(Rewrite / Major Release / New Feature / Major bug fix / Minor bug fix / Hot fix)*
 
 ---
 
 # Overview
 
-ArtixTUI automates the installation process while still keeping the install modular, transparent, and user-controlled.
+ArtixTUI automates the installation process while keeping the process **modular, transparent, and user-controlled**.  
 
-The installer follows a modular shell-based structure with separate stages and post-install components instead of one massive monolithic script.
+The installer follows a **modular shell-based structure** with separate stages and post-install components instead of one monolithic script. Almost everything is selectable during installation.  
 
-Almost everything is selectable during installation.
-
-The installer can automatically self-update when a newer upstream version is detected.
+It can **automatically self-update** when a newer upstream version is detected.
 
 ---
 
 # Features
 
 ## Init Systems
-
 Supports all official Artix init systems:
 
 - OpenRC
@@ -33,7 +30,6 @@ Supports all official Artix init systems:
 - dinit
 
 ## Display Stack
-
 Selectable display server stack:
 
 - X.Org
@@ -41,10 +37,7 @@ Selectable display server stack:
 
 Wayland compositors automatically install XWayland support where needed.
 
----
-
 ## Desktop Environments / Window Managers
-
 Currently supported:
 
 - XFCE4
@@ -59,10 +52,7 @@ Currently supported:
 
 Minimal installs are also supported.
 
----
-
 ## Kernel Selection
-
 Available kernel choices:
 
 - Linux
@@ -74,10 +64,7 @@ Available kernel choices:
 - TKG Kernel
 - Bazzite Kernel
 
----
-
 ## Filesystem Support
-
 Supported filesystems:
 
 - ext4
@@ -89,13 +76,9 @@ Supported filesystems:
 - ZFS
 
 Filesystem utilities and kernel modules required by the selected filesystem
-(e.g. `f2fs-tools`, `dosfstools`, `xfsprogs`, etc.)
-are automatically handled inside the live environment when needed.
-
----
+(e.g. `f2fs-tools`, `dosfstools`, `xfsprogs`, etc.) are automatically handled inside the live environment when needed.
 
 ## GPU Driver Detection
-
 Automatic GPU and virtualization detection.
 
 Supports:
@@ -113,10 +96,7 @@ Includes support for:
 - Nouveau fallback
 - xLibre driver stack
 
----
-
 ## Networking
-
 Selectable network stack:
 
 - NetworkManager
@@ -124,48 +104,33 @@ Selectable network stack:
 - ConnMan
 - Manual setup
 
----
-
 ## Audio
-
 Selectable audio stack:
 
 - PipeWire
 - PulseAudio
 - No audio stack
 
----
-
 ## Security
-
 Optional:
 
 - LUKS full disk encryption
 
----
-
 ## Bootloaders
-
 Supported bootloaders:
 
 - GRUB
 - rEFInd
 - EFIStub (automatic efibootmgr entry creation)
 
----
-
 ## Shell Selection
-
 Selectable user shell:
 
 - Bash
 - Zsh
 - Fish
 
----
-
 ## Extra Tools
-
 Optional extras menu includes:
 
 - Git + base-devel
@@ -195,9 +160,7 @@ Optional extras menu includes:
 - Git
 
 Some advanced filesystem or kernel combinations may require temporary
-package installation inside the live environment.
-
-ArtixTUI attempts to handle this automatically.
+package installation inside the live environment. ArtixTUI attempts to handle this automatically.
 
 ---
 
@@ -216,7 +179,20 @@ The installer can automatically self-update when a newer upstream version is det
 
 ---
 
-# What The Installer Does
+# Technics
+
+## Installer Flags
+
+- `-a, --auto` — TUI-driven automated Artix installation  
+- `-m, --manual` — Manual installation mode  
+- `-r, --resume` — Resume interrupted installation  
+- `-rr, --recovery` — Recover partially completed installation  
+- `-d, --debug` — Enable shell tracing (can be used with any mode)  
+- `-h, --help` — Show this help message  
+
+> **Note:** If the installer was interrupted (e.g., via CTRL+C), `-a` may act like `-r` and resume where it left off. Flags cannot be combined; only one mode flag should be used at a time.
+
+## What the Installer Does
 
 - Verifies required environment
 - Handles disk partitioning and formatting
@@ -235,11 +211,7 @@ The installer can automatically self-update when a newer upstream version is det
 - Supports installer recovery/resume
 - Self-updates outdated installer versions
 
----
-
-# Script Structure
-
-## Core
+## Script Structure
 
 | File | Purpose |
 |---|---|
@@ -252,9 +224,7 @@ The installer can automatically self-update when a newer upstream version is det
 | `scripts/install/` | Base installation logic |
 | `scripts/post/` | Post-install modules |
 
----
-
-## Modular Post-Install Components
+### Modular Post-Install Components
 
 Separated into individual modules:
 
@@ -280,31 +250,15 @@ To attempt recovery of a partially completed installation:
 sudo ./install -rr
 ```
 
-Recovery mode attempts to detect existing mounted installations in `/mnt`
-and continue from the appropriate stage.
-
----
-
-# Goals
-
-- Modular shell design
-- Minimal assumptions
-- Multi-init support
-- Easy maintenance
-- Easier debugging than monolithic installers
-- Keep the installer understandable
+Recovery mode attempts to detect existing mounted installations in `/mnt` and continue from the appropriate stage.
 
 ---
 
 # Maintenance
 
-Actively maintained and tested as features are added. However, this does not mean that bugs are not present.
+Actively maintained and tested as features are added. Bug reports and feedback are welcome via GitHub issues or Discord (**volk.v**).
 
-Bug reports and feedback are welcome, either as issues on the repo or directly contacting me on discord: **(volk.v)**.
-
-I am the sole maintainer.
-
-*Just because I added something does NOT mean it is immediately tested.*
+*Just because something is added does NOT mean it is immediately tested.*
 
 ---
 
@@ -315,57 +269,46 @@ I am the sole maintainer.
 - EFIStub installations require proper UEFI firmware support.
 - DKMS-based kernel/module combinations may increase installation time.
 - Some filesystem combinations may require additional live-environment tooling.
-- Eventually, some combinations WILL break the script. That is normal behavior. You should report the bug(s) so they may be fixed.
+- Certain combinations WILL break the script. Please report bugs for fixes.
+- Certain things are known to break while attempting an install: ZFS, Bazzite, Xanmod, MangoWM, etc.
+
 ---
 
 # Self-Updater Notice
 
-The installer replaces outdated files during self-update.
-
+The installer replaces outdated files during self-update.  
 Do not keep custom modifications inside the installer directory unless version controlled.
 
 ---
 
-## The "Oh no's":
+# Troubleshooting ("Oh no's")
 
-### The script won't even launch!
-
+### The script won't launch?
 ```bash
 chmod +x install
 ```
 
----
-
-### My terminal is acting all weird after the script exited for whatever reason!
-
+### Terminal acts weird after script exit?
 ```bash
 TERM=xterm-256color
 reset
 ```
+Or switch to another TTY (e.g., CTRL+ALT+F2).
 
-Alternatively: **CTRL+ALT+F2** or any other shortcut for a new TTY.
-
-*(NOTE: the `TERM=...` workaround also works inside VMs.)*
-
----
-
-### My internet / wifi went out! What now!?
-
-You should generally wait for your wifi (modem, router, etc.) to regain connection, then execute:
-
+### Internet went out mid-install
+Wait for network recovery, then:
 ```bash
 sudo ./install -r
 ```
 
----
-
-### I found a weird bug! / I got thrown an "OK" and nothing else!
-
-If you think you've found something that might be a bug, or a missing feature, check with:
-
+### Debugging hangs / weird behavior?
 ```bash
 sudo ./install -r -d
 ```
+Inspect logs in `/root/ArtixTUI/`:
+- `basestrap-debug.log`  
+- `drivers-debug.log`  
+- `post-stage.log`  
 
 This runs the installer in debug mode using the `-d` (or `--debug`) flag.
 
@@ -452,45 +395,23 @@ Then inspect:
 
 for generated logs.
 
+Inside scripts, you can temporarily add `-x` to see shell traces.
+
 ---
 
 # QnA
 
-###### *Q: Why is there only 3 .log files for the total script?! What if it breaks somewhere else?*
+**Q:** Why only 3 debug logs?  
+**A:** Key stages are logged; more may be added over time.
 
-###### A:
+**Q:** Why manually enable `-x` in scripts?  
+**A:** To pinpoint exact failures for easier debugging and reporting.
 
-Some installation stages include dedicated debug logging
-for easier troubleshooting of hardware-specific failures.
-
-Additional logging may be added over time as new features and edge cases appear.
-
----
-
-###### *Q: WTF? Why would I wanna go into the scripts folder and sub-folder to just set the -x flag?*
-
-###### A:
-
-Because it makes both debugging and bug reporting significantly easier.
-
-If the shell trace shows exactly where the script hangs,
-the problem is usually much easier to identify.
-
----
-
-###### *Q: Where can I suggest new features?*
-
-###### A:
-
-Either:
-- as an issue on the GitHub repo
-- via Discord
-- or smoke signals if you prefer
+**Q:** Where can I suggest features?  
+**A:** GitHub issues, Discord, or smoke signals if you perfer.
 
 ---
 
 # Credits
 
-Original project by:
-
-- [realvolk](https://github.com/realvolk/)
+Original project by [realvolk](https://github.com/realvolk)
