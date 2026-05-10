@@ -2,7 +2,7 @@
 set -Eeuo pipefail;
 
 stage_base() {
-    if stage_is_done base; then
+    if stage_should_skip base; then
         printf '[*] Base stage already completed. Skipping...\n';
         return 0;
     fi;

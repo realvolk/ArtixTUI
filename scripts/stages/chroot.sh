@@ -2,7 +2,7 @@
 set -Eeuo pipefail;
 
 stage_chroot() {
-    if stage_is_done chroot; then
+    if stage_should_skip chroot; then
         printf '[*] Chroot stage already completed. Skipping...\n';
         return 0;
     fi;

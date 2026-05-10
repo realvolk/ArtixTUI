@@ -2,7 +2,7 @@
 set -Eeuo pipefail;
 
 stage_post() {
-    if stage_is_done post; then
+    if stage_should_skip post; then
         printf '[*] Post-install stage already completed. Skipping...\n';
         return 0;
     fi;

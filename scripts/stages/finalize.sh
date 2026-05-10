@@ -24,7 +24,7 @@ _finalize_success_dialog() {
 }
 
 stage_finalize() {
-    if stage_is_done finalize; then
+    if stage_should_skip finalize; then
         printf '[*] Finalize stage already completed. Skipping...\n';
         return 0;
     fi;

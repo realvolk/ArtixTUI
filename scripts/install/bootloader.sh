@@ -39,7 +39,8 @@ configure_bootloader() {
             efistub)
                 local root_source;
                 local root_uuid;
-                local esp_source;
+                local esp_source='';
+                local esp_mount='';
                 local esp_disk;
                 local esp_part;
                 local kernel_image;
@@ -47,17 +48,38 @@ configure_bootloader() {
                 local microcode_image='';
                 local cmdline;
                 local loader;
+                local kernel_basename;
+                local initramfs_basename;
 
                 printf '[*] Configuring EFIStub boot entry...\n';
 
-                root_source="$(findmnt -no SOURCE /mnt)";
-                esp_source="$(findmnt -no SOURCE /mnt/boot/efi)";
+                root_source="$(findmnt -rn -o SOURCE /mnt)";
 
                 [[ -n "${root_source}" ]] \
                     || die 'failed to detect root partition';
 
+                for esp_mount in \
+                    /mnt/boot/efi \
+                    /mnt/efi \
+                    /mnt/boot; do
+
+                    if findmnt -rn "${esp_mount}" >/dev/null 2>&1; then
+                        esp_source="$(
+                            findmnt -rn -o SOURCE "${esp_mount}"
+                        )";
+
+                        break;
+                    fi
+                done
+
                 [[ -n "${esp_source}" ]] \
                     || die 'failed to detect EFI partition';
+
+                printf '[*] EFI partition mount: %s\n' \
+                    "${esp_mount}";
+
+                printf '[*] EFI partition source: %s\n' \
+                    "${esp_source}";
 
                 root_uuid="$(
                     blkid -s UUID -o value "${root_source}"
@@ -109,13 +131,38 @@ configure_bootloader() {
                 [[ -n "${initramfs_image}" ]] \
                     || die 'failed to locate initramfs image';
 
-                if [[ -f /mnt/boot/intel-ucode.img ]]; then
-                    microcode_image='initrd=\intel-ucode.img'
-                elif [[ -f /mnt/boot/amd-ucode.img ]]; then
-                    microcode_image='initrd=\amd-ucode.img'
+                kernel_basename="$(basename "${kernel_image}")";
+                initramfs_basename="$(basename "${initramfs_image}")";
+
+                if [[ "${esp_mount}" != '/mnt/boot' ]]; then
+                    printf '[*] Copying kernel artifacts to EFI partition...\n';
+
+                    cp -f "${kernel_image}" \
+                        "${esp_mount}/${kernel_basename}";
+
+                    cp -f "${initramfs_image}" \
+                        "${esp_mount}/${initramfs_basename}";
+
+                    if [[ -f /mnt/boot/intel-ucode.img ]]; then
+                        cp -f /mnt/boot/intel-ucode.img \
+                            "${esp_mount}/intel-ucode.img";
+
+                        microcode_image='initrd=\intel-ucode.img'
+                    elif [[ -f /mnt/boot/amd-ucode.img ]]; then
+                        cp -f /mnt/boot/amd-ucode.img \
+                            "${esp_mount}/amd-ucode.img";
+
+                        microcode_image='initrd=\amd-ucode.img'
+                    fi
+                else
+                    if [[ -f /mnt/boot/intel-ucode.img ]]; then
+                        microcode_image='initrd=\intel-ucode.img'
+                    elif [[ -f /mnt/boot/amd-ucode.img ]]; then
+                        microcode_image='initrd=\amd-ucode.img'
+                    fi
                 fi
 
-                loader="\\$(basename "${kernel_image}")"
+                loader="\\${kernel_basename}"
 
                 cmdline="root=UUID=${root_uuid} rw"
 
@@ -123,13 +170,13 @@ configure_bootloader() {
                     cmdline+=" ${microcode_image}"
                 fi
 
-                cmdline+=" initrd=\\$(basename "${initramfs_image}")"
+                cmdline+=" initrd=\\${initramfs_basename}"
 
                 printf '[*] Kernel image: %s\n' \
-                    "$(basename "${kernel_image}")";
+                    "${kernel_basename}";
 
                 printf '[*] Initramfs image: %s\n' \
-                    "$(basename "${initramfs_image}")";
+                    "${initramfs_basename}";
 
                 printf '[*] Creating EFI boot entry...\n';
 

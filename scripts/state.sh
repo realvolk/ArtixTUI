@@ -91,3 +91,113 @@ stage_log_path() {
         "${LOG_DIR}" \
         "${1}";
 }
+
+stage_require_mount() {
+    mountpoint -q /mnt
+}
+
+stage_require_chroot() {
+    mountpoint -q /mnt \
+        && [[ -x /mnt/usr/bin/bash ]] \
+        && [[ -f /mnt/etc/fstab ]]
+}
+
+stage_require_post() {
+    [[ -d /mnt/root ]]
+}
+
+stage_validate() {
+    local stage="${1}";
+
+    case "${stage}" in
+        storage)
+            stage_require_mount
+            ;;
+
+        base)
+            stage_require_mount
+            ;;
+
+        chroot)
+            stage_require_chroot
+            ;;
+
+        post)
+            stage_require_chroot
+            ;;
+
+        finalize)
+            return 0
+            ;;
+
+        *)
+            return 0
+            ;;
+    esac
+}
+
+stage_reset_from() {
+    local stage="${1}";
+
+    case "${stage}" in
+        preflight)
+            stage_reset preflight
+            stage_reset storage
+            stage_reset base
+            stage_reset chroot
+            stage_reset post
+            stage_reset finalize
+            ;;
+
+        storage)
+            stage_reset storage
+            stage_reset base
+            stage_reset chroot
+            stage_reset post
+            stage_reset finalize
+            ;;
+
+        base)
+            stage_reset base
+            stage_reset chroot
+            stage_reset post
+            stage_reset finalize
+            ;;
+
+        chroot)
+            stage_reset chroot
+            stage_reset post
+            stage_reset finalize
+            ;;
+
+        post)
+            stage_reset post
+            stage_reset finalize
+            ;;
+
+        finalize)
+            stage_reset finalize
+            ;;
+    esac
+}
+
+stage_should_skip() {
+    local stage="${1}";
+
+    if ! stage_is_done "${stage}"; then
+        return 1;
+    fi
+
+    if ! stage_validate "${stage}"; then
+        printf '[!] Stage "%s" marked complete but environment is invalid.\n' \
+            "${stage}";
+
+        printf '[!] Resetting stage state...\n';
+
+        stage_reset_from "${stage}";
+
+        return 1;
+    fi
+
+    return 0;
+}
