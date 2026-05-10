@@ -344,26 +344,6 @@ Then run the installer again with:
 sudo ./install -r
 ```
 
----
-
-Alternatively, check the generated logs.
-
-If a failure occurs, partitions usually remain mounted:
-
-```bash
-artix-chroot /mnt
-
-cd /root/ArtixTUI
-```
-
-Inside `ArtixTUI/` you may find:
-
-- `basestrap-debug.log`
-- `drivers-debug.log`
-- `post-stage.log`
-
-###### P.S.
-
 You can inspect logs with:
 
 ```bash
