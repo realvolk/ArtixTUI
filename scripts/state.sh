@@ -24,6 +24,11 @@ INIT="${INIT:-}"
 USE_LUKS="${USE_LUKS:-}"
 LUKS_PASS="${LUKS_PASS:-}"
 BOOTLOADER="${BOOTLOADER:-}"
+DISPLAY_MANAGER="${DISPLAY_MANAGER:-none}"
+AUDIO_STACK="${AUDIO_STACK:-pipewire}"
+SWAP_ENABLED="${SWAP_ENABLED:-no}"
+SWAP_SIZE="${SWAP_SIZE:-0}"
+EXTRAS="${EXTRAS:-}"
 KERNEL_CHOICE="${KERNEL_CHOICE:-}"
 KERNEL_IMAGE="${KERNEL_IMAGE:-}"
 INITRAMFS_IMAGE="${INITRAMFS_IMAGE:-}"
@@ -136,7 +141,7 @@ stage_validate() {
             ;;
 
         storage)
-            stage_require_mount
+            [[ -b "$(state_get DISK)" ]]
             ;;
 
         base)

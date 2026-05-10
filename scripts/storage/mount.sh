@@ -29,6 +29,30 @@ mount_filesystems() {
     fi
 
     {
+        case "${fs_type}" in
+            btrfs)
+                modprobe btrfs >/dev/null 2>&1 || true;
+                ;;
+
+            ext4)
+                modprobe ext4 >/dev/null 2>&1 || true;
+                ;;
+
+            xfs)
+                modprobe xfs >/dev/null 2>&1 || true;
+                ;;
+
+            f2fs)
+                modprobe f2fs >/dev/null 2>&1 || true;
+                ;;
+
+            exfat)
+                modprobe exfat >/dev/null 2>&1 || true;
+                ;;
+        esac
+
+        modprobe vfat >/dev/null 2>&1 || true;
+
         printf '[*] Mounting root filesystem...\n';
 
         case "${fs_type}" in
@@ -85,7 +109,7 @@ mount_filesystems() {
                 ;;
 
             ext4|xfs|f2fs|bcachefs|exfat)
-                mount "${root_part}" /mnt;
+                mount -t "${fs_type}" "${root_part}" /mnt;
                 ;;
 
             *)
@@ -95,7 +119,7 @@ mount_filesystems() {
 
         printf '[*] Mounting EFI partition...\n';
 
-        mount --mkdir \
+        mount -t vfat --mkdir \
             "${efi_part}" \
             "${efi_mount}";
 

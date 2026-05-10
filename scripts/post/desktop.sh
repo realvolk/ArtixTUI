@@ -95,13 +95,13 @@ Include = /etc/pacman.d/chaotic-mirrorlist
 EOF
             fi
 
-            pacman -Sy --noconfirm
+            pacman -Syu --noconfirm
 
             pkgs+=(
                 foot
                 waybar
                 wofi
-                xdg-desktop-portal-wlr
+                xdg-desktop-portal-hyprland
 
                 seatd
                 "seatd-${init}"

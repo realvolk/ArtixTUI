@@ -9,6 +9,10 @@ create_filesystems() {
     local kernel_headers='linux-headers';
 
     disk="$(state_get DISK)";
+
+    [[ -b "${disk}" ]] \
+        || die "invalid disk: ${disk}";
+
     fs_type="$(state_get FS_TYPE)";
     swap_enabled="$(state_get SWAP_ENABLED no)";
     kernel_choice="$(state_get KERNEL_CHOICE linux)";
@@ -25,6 +29,12 @@ create_filesystems() {
     else
         root_part=$(get_partition_name "${disk}" 2);
     fi
+
+    [[ "${efi_part}" =~ ^${disk} ]] \
+        || die "EFI partition does not belong to selected disk";
+
+    [[ "${root_part}" =~ ^${disk} ]] \
+        || die "Root partition does not belong to selected disk";
 
     case "${kernel_choice}" in
         linux)
@@ -90,6 +100,9 @@ create_filesystems() {
             f2fs)
                 pacman -Sy --needed --noconfirm f2fs-tools;
 
+                command -v mkfs.f2fs >/dev/null 2>&1 \
+                    || die 'mkfs.f2fs is unavailable';
+
                 modprobe f2fs >/dev/null 2>&1 || true;
                 ;;
 
@@ -102,7 +115,8 @@ create_filesystems() {
 
         printf '[*] Formatting EFI partition...\n';
 
-        mkfs.fat -F32 "${efi_part}";
+        mkfs.fat -F32 "${efi_part}" \
+            || die 'failed to create FAT32 EFI filesystem';
 
         if [[ "${swap_enabled}" == 'yes' ]]; then
             printf '[*] Initializing swap...\n';

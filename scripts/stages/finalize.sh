@@ -5,6 +5,14 @@ _finalize_sync() {
     sync;
 }
 
+_finalize_cleanup_installer_state() {
+    if [[ -f /mnt/etc/artix-installer.conf ]]; then
+        shred -u /mnt/etc/artix-installer.conf \
+            2>/dev/null \
+            || rm -f /mnt/etc/artix-installer.conf;
+    fi
+}
+
 _finalize_unmount() {
     umount -R /mnt 2>/dev/null || true;
 
@@ -44,6 +52,11 @@ stage_finalize() {
 
     if ! _finalize_sync; then
         printf '[!] Failed to sync filesystem buffers.\n' >&2;
+        return 1;
+    fi
+
+    if ! _finalize_cleanup_installer_state; then
+        printf '[!] Failed to clean installer state.\n' >&2;
         return 1;
     fi
 

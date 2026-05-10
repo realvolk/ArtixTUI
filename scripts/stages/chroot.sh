@@ -4,7 +4,10 @@ set -Eeuo pipefail;
 stage_chroot() {
     if stage_should_skip chroot; then
         return 0;
-    fi;
+    fi
+
+    stage_require_chroot \
+        || die "chroot environment is not ready";
 
     local init;
     local rc=0;
@@ -19,19 +22,25 @@ stage_chroot() {
         *)
             die "invalid init system: ${init}";
             ;;
-    esac;
+    esac
 
-    printf '[*] Installing init system: %s\n' "${init}";
+    printf '[*] Verifying init system: %s\n' "${init}";
 
-    artix-chroot /mnt pacman -S --noconfirm "${init}";
-    rc=$?
+    if ! artix-chroot /mnt pacman -Q "${init}" \
+        >/dev/null 2>&1; then
 
-    if [[ ${rc} -ne 0 ]]; then
-        printf '[!] Failed to install init system: %s\n' \
-            "${init}" \
-            >&2;
+        printf '[*] Installing init system: %s\n' "${init}";
 
-        return "${rc}";
+        artix-chroot /mnt pacman -S --noconfirm "${init}";
+        rc=$?
+
+        if [[ ${rc} -ne 0 ]]; then
+            printf '[!] Failed to install init system: %s\n' \
+                "${init}" \
+                >&2;
+
+            return "${rc}";
+        fi
     fi
 
     if ! configure_users; then
