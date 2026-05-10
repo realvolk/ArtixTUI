@@ -3,63 +3,63 @@ install_extras() {
     local pkgs=();
     local init;
 
-    selected="${EXTRAS:-}";
+    selected=" ${EXTRAS:-} ";
     init="${INIT:-openrc}";
 
-    [[ "${selected}" == *git* ]] && \
+    [[ "${selected}" == *" git "* ]] && \
         pkgs+=(git base-devel);
 
-    [[ "${selected}" == *flatpak* ]] && \
+    [[ "${selected}" == *" flatpak "* ]] && \
         pkgs+=(flatpak);
 
-    [[ "${selected}" == *fastfetch* ]] && \
+    [[ "${selected}" == *" fastfetch "* ]] && \
         pkgs+=(fastfetch);
 
-    [[ "${selected}" == *ufw* ]] && \
+    [[ "${selected}" == *" ufw "* ]] && \
         pkgs+=(ufw "ufw-${init}");
 
-    [[ "${selected}" == *bluez* ]] && \
+    [[ "${selected}" == *" bluez "* ]] && \
         pkgs+=(
             bluez
             bluez-utils
             "bluez-${init}"
         );
 
-    [[ "${selected}" == *zram-tools* ]] && \
+    [[ "${selected}" == *" zram-tools "* ]] && \
         pkgs+=(
             zram-tools
             "zram-tools-${init}"
         );
 
-    [[ "${selected}" == *fzf* ]] && \
+    [[ "${selected}" == *" fzf "* ]] && \
         pkgs+=(fzf);
 
-    [[ "${selected}" == *zoxide* ]] && \
+    [[ "${selected}" == *" zoxide "* ]] && \
         pkgs+=(zoxide);
 
-    [[ "${selected}" == *starship* ]] && \
+    [[ "${selected}" == *" starship "* ]] && \
         pkgs+=(starship);
 
-    [[ "${selected}" == *eza* ]] && \
+    [[ "${selected}" == *" eza "* ]] && \
         pkgs+=(eza);
 
-    [[ "${selected}" == *btop* ]] && \
+    [[ "${selected}" == *" btop "* ]] && \
         pkgs+=(btop);
 
-    [[ "${selected}" == *htop* ]] && \
+    [[ "${selected}" == *" htop "* ]] && \
         pkgs+=(htop);
 
-    [[ "${selected}" == *nvtop* ]] && \
+    [[ "${selected}" == *" nvtop "* ]] && \
         pkgs+=(nvtop);
 
-    [[ "${selected}" == *tmux* ]] && \
+    [[ "${selected}" == *" tmux "* ]] && \
         pkgs+=(tmux);
 
-    [[ "${selected}" == *usb_modeswitch* ]] && \
+    [[ "${selected}" == *" usb_modeswitch "* ]] && \
         pkgs+=(usb_modeswitch);
 
     [[ ${#pkgs[@]} -eq 0 ]] && \
-        [[ "${selected}" != *rsvc* ]] && \
+        [[ "${selected}" != *" rsvc "* ]] && \
         return 0;
 
     printf '[*] Installing extras...\n';
@@ -71,16 +71,16 @@ install_extras() {
             "${pkgs[@]}";
     fi
 
-    [[ "${selected}" == *ufw* ]] && \
+    [[ "${selected}" == *" ufw "* ]] && \
         enable_service ufw;
 
-    [[ "${selected}" == *bluez* ]] && \
+    [[ "${selected}" == *" bluez "* ]] && \
         enable_service bluetooth;
 
-    [[ "${selected}" == *zram-tools* ]] && \
+    [[ "${selected}" == *" zram-tools "* ]] && \
         enable_service zramd;
 
-    if [[ "${selected}" == *rsvc* ]]; then
+    if [[ "${selected}" == *" rsvc "* ]]; then
         if [[ "${init}" != 'runit' ]]; then
             printf '\n[!] rsvc is only supported on runit systems.\n';
         else

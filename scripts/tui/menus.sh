@@ -183,7 +183,15 @@ tui_select_display_manager() {
 }
 
 tui_select_xstack() {
+    local wm_de;
     local stack;
+
+    wm_de="$(state_get WM_DE none)";
+
+    if [[ "${wm_de}" == 'none' ]]; then
+        state_set X_STACK "none";
+        return 0;
+    fi
 
     stack=$(
         tui_menu \
