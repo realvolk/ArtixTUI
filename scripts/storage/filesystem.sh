@@ -61,6 +61,45 @@ create_filesystems() {
     esac
 
     {
+        printf '[*] Ensuring EFI filesystem support...\n';
+
+        pacman -Sy --needed --noconfirm dosfstools;
+
+        modprobe fat >/dev/null 2>&1 || true;
+        modprobe vfat >/dev/null 2>&1 || true;
+
+        case "${fs_type}" in
+            btrfs)
+                pacman -Sy --needed --noconfirm btrfs-progs;
+
+                modprobe btrfs >/dev/null 2>&1 || true;
+                ;;
+
+            ext4)
+                pacman -Sy --needed --noconfirm e2fsprogs;
+
+                modprobe ext4 >/dev/null 2>&1 || true;
+                ;;
+
+            xfs)
+                pacman -Sy --needed --noconfirm xfsprogs;
+
+                modprobe xfs >/dev/null 2>&1 || true;
+                ;;
+
+            f2fs)
+                pacman -Sy --needed --noconfirm f2fs-tools;
+
+                modprobe f2fs >/dev/null 2>&1 || true;
+                ;;
+
+            exfat)
+                pacman -Sy --needed --noconfirm exfatprogs;
+
+                modprobe exfat >/dev/null 2>&1 || true;
+                ;;
+        esac
+
         printf '[*] Formatting EFI partition...\n';
 
         mkfs.fat -F32 "${efi_part}";
