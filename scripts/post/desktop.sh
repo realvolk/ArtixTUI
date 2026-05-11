@@ -13,6 +13,27 @@ install_desktop() {
         kde_profile="$(state_get KDE_PROFILE desktop)";
     fi
 
+    if [[ "${wm_de}" != 'kde' ]] \
+        && [[ "${kde_profile}" != 'none' ]]; then
+
+        printf '[*] Ignoring KDE profile for non-KDE desktop: %s\n' \
+            "${wm_de}";
+
+        kde_profile='none';
+    fi
+
+    printf '[*] Verifying dbus service...\n';
+
+    if ! service_exists dbus; then
+        printf '[*] dbus service is missing for init: %s\n' \
+            "${init}" \
+            >&2;
+
+        return 1;
+    fi
+
+    enable_service dbus;
+
     case "${wm_de}" in
         xfce4)
             pkgs+=(

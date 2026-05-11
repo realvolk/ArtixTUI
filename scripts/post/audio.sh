@@ -9,8 +9,13 @@ setup_audio() {
             pkgs+=(
                 pipewire
                 pipewire-pulse
+                pipewire-alsa
+                pipewire-jack
                 wireplumber
+
+                alsa-utils
                 pavucontrol
+                rtkit
             )
             ;;
 
@@ -18,6 +23,8 @@ setup_audio() {
             pkgs+=(
                 pulseaudio
                 pulseaudio-alsa
+
+                alsa-utils
                 pavucontrol
             )
             ;;
@@ -27,8 +34,14 @@ setup_audio() {
             ;;
     esac
 
-    pacman -S \
+    printf '[*] Installing audio packages...\n';
+
+    if ! pacman -S \
         --noconfirm \
         --needed \
-        "${pkgs[@]}"
+        "${pkgs[@]}"; then
+
+        printf '[*] Failed to install audio packages.\n' >&2;
+        return 1;
+    fi
 }
