@@ -85,6 +85,7 @@ INITRAMFS_IMAGE="$(state_get INITRAMFS_IMAGE)"
 MICROCODE_IMAGE="$(state_get MICROCODE_IMAGE)"
 
 WM_DE="$(state_get WM_DE)"
+KDE_PROFILE="$(state_get KDE_PROFILE)"
 
 USER_NAME="$(state_get USER_NAME)"
 USER_PASS="$(state_get USER_PASS)"

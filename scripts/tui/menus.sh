@@ -146,6 +146,25 @@ tui_select_desktop() {
     [[ -n "${desktop}" ]] || return 1;
 
     state_set WM_DE "${desktop}";
+
+    if [[ "${desktop}" == 'kde' ]]; then
+        local kde_profile;
+
+        kde_profile=$(
+            tui_menu \
+                " KDE Profile " \
+                "Select KDE Plasma profile:" \
+                "minimal" "Minimal Plasma setup" \
+                "desktop" "Standard Plasma desktop" \
+                "full"    "Full KDE applications suite"
+        );
+
+        [[ -n "${kde_profile}" ]] || return 1;
+
+        state_set KDE_PROFILE "${kde_profile}";
+    else
+        state_set KDE_PROFILE "none";
+    fi
 }
 
 tui_select_display_manager() {

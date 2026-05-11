@@ -2,18 +2,15 @@ install_desktop() {
     local wm_de;
     local init;
     local display_manager;
+    local kde_profile='none';
     local pkgs=();
 
     wm_de="${WM_DE:-none}";
     init="${INIT:-openrc}";
     display_manager="${DISPLAY_MANAGER:-none}";
 
-    if [[ "${wm_de}" == 'kde' ]] \
-        && [[ "${display_manager}" == 'none' ]]; then
-
-        printf '[*] KDE detected, defaulting to SDDM...\n';
-
-        display_manager='sddm';
+    if [[ "${wm_de}" == 'kde' ]]; then
+        kde_profile="$(state_get KDE_PROFILE desktop)";
     fi
 
     case "${wm_de}" in
@@ -31,11 +28,37 @@ install_desktop() {
             ;;
 
         kde)
-            pkgs+=(
-                plasma
-                kde-applications
-                xdg-desktop-portal-kde
-            )
+            case "${kde_profile}" in
+                minimal)
+                    printf '[*] Installing KDE minimal profile...\n';
+
+                    pkgs+=(
+                        plasma-desktop
+                        dolphin
+                        konsole
+                        xdg-desktop-portal-kde
+                    )
+                    ;;
+
+                full|edge)
+                    printf '[*] Installing KDE full profile...\n';
+
+                    pkgs+=(
+                        plasma
+                        kde-applications
+                        xdg-desktop-portal-kde
+                    )
+                    ;;
+
+                desktop|*)
+                    printf '[*] Installing KDE desktop profile...\n';
+
+                    pkgs+=(
+                        plasma
+                        xdg-desktop-portal-kde
+                    )
+                    ;;
+            esac
             ;;
 
         lxde)

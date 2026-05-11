@@ -4,7 +4,7 @@ Modular TUI installer for Artix Linux.
 
 Designed for users who want a configurable Artix setup without manually performing every installation step.
 
-#### Version: v6.2.4.0
+#### Version: v6.2.5.0
 *(Rewrite / Major Release / New Feature / Major bug fix / Minor bug fix / Hot fix)*
 
 ---
@@ -42,6 +42,7 @@ Currently supported:
 
 - XFCE4
 - LXQt
+- KDE
 - LXDE
 - Hyprland
 - Niri
