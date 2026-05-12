@@ -5,8 +5,6 @@ create_filesystems() {
     local disk;
     local fs_type;
     local swap_enabled;
-    local kernel_choice;
-    local kernel_headers='linux-headers';
 
     disk="$(state_get DISK)";
 
@@ -15,7 +13,6 @@ create_filesystems() {
 
     fs_type="$(state_get FS_TYPE)";
     swap_enabled="$(state_get SWAP_ENABLED no)";
-    kernel_choice="$(state_get KERNEL_CHOICE linux)";
 
     local efi_part;
     local swap_part='';
@@ -35,40 +32,6 @@ create_filesystems() {
 
     [[ "${root_part}" =~ ^${disk} ]] \
         || die "Root partition does not belong to selected disk";
-
-    case "${kernel_choice}" in
-        linux)
-            kernel_headers='linux-headers'
-            ;;
-
-        linux-lts)
-            kernel_headers='linux-lts-headers'
-            ;;
-
-        linux-hardened)
-            kernel_headers='linux-hardened-headers'
-            ;;
-
-        linux-zen)
-            kernel_headers='linux-zen-headers'
-            ;;
-
-        linux-cachy|linux-cachyos)
-            if pacman -Si linux-cachyos-headers \
-                >/dev/null 2>&1; then
-
-                kernel_headers='linux-cachyos-headers'
-            elif pacman -Si linux-cachy-headers \
-                >/dev/null 2>&1; then
-
-                kernel_headers='linux-cachy-headers'
-            fi
-            ;;
-
-        xanmod)
-            kernel_headers='linux-xanmod-headers'
-            ;;
-    esac
 
     {
         printf '[*] Ensuring EFI filesystem support...\n';
@@ -106,10 +69,46 @@ create_filesystems() {
                 modprobe f2fs >/dev/null 2>&1 || true;
                 ;;
 
+            bcachefs)
+                printf '[*] Ensuring Bcachefs tools are installed...\n';
+
+                if ! command -v mkfs.bcachefs >/dev/null 2>&1; then
+                    pacman -Sy --needed --noconfirm \
+                        bcachefs-tools \
+                        >/dev/null 2>&1 || true;
+                fi
+
+                command -v mkfs.bcachefs >/dev/null 2>&1 \
+                    || die 'mkfs.bcachefs is unavailable';
+
+                modprobe bcachefs >/dev/null 2>&1 || true;
+                ;;
+
             exfat)
                 pacman -Sy --needed --noconfirm exfatprogs;
 
                 modprobe exfat >/dev/null 2>&1 || true;
+                ;;
+
+            zfs)
+                printf '[*] Verifying ZFS support...\n';
+
+                command -v zpool >/dev/null 2>&1 \
+                    || die 'zpool command is unavailable';
+
+                if ! modprobe zfs >/dev/null 2>&1; then
+                    dialog \
+                        --title " ZFS Unsupported " \
+                        --msgbox \
+"Failed to load the ZFS kernel module.
+
+The current live environment does not support ZFS.
+
+Please use a ZFS-capable ISO/kernel." \
+                        10 70;
+
+                    return 1;
+                fi
                 ;;
         esac
 
@@ -151,37 +150,11 @@ create_filesystems() {
                 ;;
 
             bcachefs)
-                printf '[*] Ensuring Bcachefs tools are installed...\n';
-
-                if ! command -v mkfs.bcachefs >/dev/null 2>&1; then
-                    if tui_yesno \
-                        " Bcachefs Support " \
-                        "Bcachefs tools are not currently installed.\n\nTry installing them now?"; then
-
-                        printf '[*] Attempting to install Bcachefs tools...\n';
-
-                        pacman -Sy --noconfirm bcachefs-tools \
-                            || pacman -Sy --noconfirm bcachefs-tools-git \
-                            || true;
-                    fi
-                fi
-
-                if ! command -v mkfs.bcachefs >/dev/null 2>&1; then
-                    dialog \
-                        --title " Bcachefs Unsupported " \
-                        --msgbox \
-"Unable to install Bcachefs tools in the current live environment.
-
-Please use an ISO with Bcachefs support,
-or choose another filesystem." \
-                        10 70;
-
-                    return 1;
-                fi
-
                 printf '[*] Creating Bcachefs filesystem...\n';
 
-                mkfs.bcachefs -f "${root_part}";
+                mkfs.bcachefs \
+                    --force \
+                    "${root_part}";
                 ;;
 
             exfat)
@@ -191,46 +164,15 @@ or choose another filesystem." \
                 ;;
 
             zfs)
-                printf '[*] Setting up OpenZFS repository...\n';
-
-                if ! grep -q '^\[archzfs\]' /etc/pacman.conf; then
-                    cat <<'EOF' >> /etc/pacman.conf
-
-[archzfs]
-Server = https://archzfs.com/$repo/x86_64
-EOF
-                fi
-
-                pacman-key --init;
-                pacman-key --populate artix;
-
-                pacman-key \
-                    --recv-keys F75D9D76 \
-                    --keyserver keyserver.ubuntu.com;
-
-                pacman-key \
-                    --lsign-key F75D9D76;
-
-                pacman -Sy --noconfirm;
-
-                printf '[*] Installing ZFS utilities...\n';
-
-                pacman -S --noconfirm \
-                    dkms \
-                    "${kernel_headers}" \
-                    zfs-dkms \
-                    zfs-utils;
-
-                printf '[*] Creating ZFS pool...\n';
+                printf '[*] Clearing old ZFS labels...\n';
 
                 zpool labelclear -f "${root_part}" \
                     >/dev/null 2>&1 || true;
 
-                dkms install \
-                    zfs/"$(pacman -Q zfs-dkms | awk '{print $2}')" \
-                    || true;
+                wipefs -af "${root_part}" \
+                    >/dev/null 2>&1 || true;
 
-                modprobe zfs;
+                printf '[*] Creating ZFS pool...\n';
 
                 zpool create \
                     -f \
@@ -240,7 +182,9 @@ EOF
                     -O mountpoint=none \
                     zroot "${root_part}";
 
-                zfs create -o mountpoint=/ zroot/root;
+                zfs create \
+                    -o mountpoint=/ \
+                    zroot/root;
                 ;;
         esac
 

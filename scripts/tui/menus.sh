@@ -63,21 +63,35 @@ tui_select_filesystem() {
 
     [[ -n "${fs}" ]] || return 1;
 
-    if [[ "${fs}" == 'zfs' ]]; then
-        if ! modinfo zfs >/dev/null 2>&1; then
-            dialog \
-                --title " ZFS Unsupported " \
-                --msgbox \
-"ZFS support is unavailable in the current live environment.
+    case "${fs}" in
+        zfs)
+            if ! pacman -Si zfs-utils >/dev/null 2>&1; then
+                dialog \
+                    --title " ZFS Unavailable " \
+                    --msgbox \
+"ZFS packages are unavailable in the current environment.
 
-The required ZFS kernel modules are not loaded or not present on this ISO.
+Please check your repositories or internet connection." \
+                    10 70;
 
-Please use a ZFS-enabled Artix environment or custom ISO build." \
-                12 70;
+                return 1;
+            fi
+            ;;
 
-            return 1;
-        fi
-    fi
+        bcachefs)
+            if ! pacman -Si bcachefs-tools >/dev/null 2>&1; then
+                dialog \
+                    --title " bcachefs Unavailable " \
+                    --msgbox \
+"bcachefs tools are unavailable in the current environment.
+
+Please check your repositories or internet connection." \
+                    10 70;
+
+                return 1;
+            fi
+            ;;
+    esac
 
     state_set FS_TYPE "${fs}";
 }

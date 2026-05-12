@@ -45,6 +45,7 @@ SCRIPT_DIR="${BASE_DIR}/scripts";
 source "${SCRIPT_DIR}/common.sh";
 source "${SCRIPT_DIR}/state.sh";
 source "${SCRIPT_DIR}/recovery.sh";
+source "${SCRIPT_DIR}/kernels.sh";
 
 source "${SCRIPT_DIR}/tui/core.sh";
 source "${SCRIPT_DIR}/tui/menus.sh";

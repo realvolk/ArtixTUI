@@ -3,39 +3,113 @@ set -Eeuo pipefail;
 
 prepare_handoff() {
     local script_dir;
+    local kernel_choice;
     local kernel_image='';
     local initramfs_image='';
     local microcode_image='';
 
     script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)";
+    kernel_choice="$(state_get KERNEL_CHOICE linux)";
 
     {
         printf '[*] Detecting boot artifacts...\n';
 
-        mapfile -t kernels < <(
-            find /mnt/boot \
-                -maxdepth 1 \
-                -type f \
-                -name 'vmlinuz-*' \
-                2>/dev/null \
-                | sort
-        );
+        case "${kernel_choice}" in
+            linux)
+                kernel_image='/mnt/boot/vmlinuz-linux';
+                initramfs_image='/mnt/boot/initramfs-linux.img';
+                ;;
 
-        mapfile -t initramfses < <(
-            find /mnt/boot \
-                -maxdepth 1 \
-                -type f \
-                -name 'initramfs-*.img' \
-                ! -name '*fallback*' \
-                2>/dev/null \
-                | sort
-        );
+            linux-zen)
+                kernel_image='/mnt/boot/vmlinuz-linux-zen';
+                initramfs_image='/mnt/boot/initramfs-linux-zen.img';
+                ;;
 
-        [[ ${#kernels[@]} -gt 0 ]] \
-            && kernel_image="${kernels[0]}";
+            linux-lts)
+                kernel_image='/mnt/boot/vmlinuz-linux-lts';
+                initramfs_image='/mnt/boot/initramfs-linux-lts.img';
+                ;;
 
-        [[ ${#initramfses[@]} -gt 0 ]] \
-            && initramfs_image="${initramfses[0]}";
+            linux-hardened)
+                kernel_image='/mnt/boot/vmlinuz-linux-hardened';
+                initramfs_image='/mnt/boot/initramfs-linux-hardened.img';
+                ;;
+
+            linux-libre)
+                kernel_image='/mnt/boot/vmlinuz-linux-libre';
+                initramfs_image='/mnt/boot/initramfs-linux-libre.img';
+                ;;
+
+            linux-cachyos-bore)
+                kernel_image='/mnt/boot/vmlinuz-linux-cachyos-bore';
+                initramfs_image='/mnt/boot/initramfs-linux-cachyos-bore.img';
+                ;;
+
+            linux-bazzite-bin)
+                kernel_image='/mnt/boot/vmlinuz-linux-bazzite-bin';
+                initramfs_image='/mnt/boot/initramfs-linux-bazzite-bin.img';
+                ;;
+
+            xanmod)
+                mapfile -t kernels < <(
+                    find /mnt/boot \
+                        -maxdepth 1 \
+                        -type f \
+                        -name 'vmlinuz-linux-xanmod*' \
+                        2>/dev/null \
+                        | sort
+                );
+
+                mapfile -t initramfses < <(
+                    find /mnt/boot \
+                        -maxdepth 1 \
+                        -type f \
+                        -name 'initramfs-linux-xanmod*.img' \
+                        ! -name '*fallback*' \
+                        2>/dev/null \
+                        | sort
+                );
+
+                [[ ${#kernels[@]} -gt 0 ]] \
+                    && kernel_image="${kernels[0]}";
+
+                [[ ${#initramfses[@]} -gt 0 ]] \
+                    && initramfs_image="${initramfses[0]}";
+                ;;
+
+            *)
+                mapfile -t kernels < <(
+                    find /mnt/boot \
+                        -maxdepth 1 \
+                        -type f \
+                        -name 'vmlinuz-*' \
+                        2>/dev/null \
+                        | sort
+                );
+
+                mapfile -t initramfses < <(
+                    find /mnt/boot \
+                        -maxdepth 1 \
+                        -type f \
+                        -name 'initramfs-*.img' \
+                        ! -name '*fallback*' \
+                        2>/dev/null \
+                        | sort
+                );
+
+                [[ ${#kernels[@]} -gt 0 ]] \
+                    && kernel_image="${kernels[0]}";
+
+                [[ ${#initramfses[@]} -gt 0 ]] \
+                    && initramfs_image="${initramfses[0]}";
+                ;;
+        esac
+
+        [[ -f "${kernel_image}" ]] \
+            || kernel_image='';
+
+        [[ -f "${initramfs_image}" ]] \
+            || initramfs_image='';
 
         if [[ -f /mnt/boot/intel-ucode.img ]]; then
             microcode_image='intel-ucode.img'

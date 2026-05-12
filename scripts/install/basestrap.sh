@@ -20,6 +20,8 @@ install_base_system() {
     display_manager="$(state_get DISPLAY_MANAGER none)";
     wm_de="$(state_get WM_DE none)";
 
+    detect_kernel_package "${kernel}";
+
     local ucode='amd-ucode';
 
     grep -q 'GenuineIntel' /proc/cpuinfo \
@@ -197,34 +199,6 @@ EOF
             ;;
 
         xanmod)
-            local cpu_level;
-            local kernel_pkg;
-
-            cpu_level=$(
-                /lib/ld-linux-x86-64.so.2 --help \
-                    | grep -E 'x86-64-v[2-4] \(supported' \
-                    | head -n1 \
-                    | awk '{print $1}'
-            );
-
-            case "${cpu_level}" in
-                x86-64-v4)
-                    kernel_pkg='linux-xanmod-x64v4';
-                    ;;
-
-                x86-64-v3)
-                    kernel_pkg='linux-xanmod-x64v3';
-                    ;;
-
-                x86-64-v2)
-                    kernel_pkg='linux-xanmod-x64v2';
-                    ;;
-
-                *)
-                    kernel_pkg='linux-xanmod';
-                    ;;
-            esac;
-
             printf '[*] Setting up Chaotic-AUR for XanMod...\n';
 
             pacman-key --init;
@@ -252,8 +226,8 @@ EOF
             pacman -Sy --noconfirm;
 
             pkgs+=(
-                "${kernel_pkg}"
-                "${kernel_pkg}-headers"
+                "${KERNEL_PACKAGE}"
+                "${KERNEL_HEADERS}"
             );
             ;;
 
