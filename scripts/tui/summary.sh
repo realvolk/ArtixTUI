@@ -5,6 +5,12 @@ tui_show_summary() {
     local summary='';
 
     summary+="Disk: $(state_get DISK)\n";
+    summary+="Hostname: $(state_get HOSTNAME artix)\n";
+    summary+="Timezone: $(state_get TIMEZONE Europe/Belgrade)\n";
+    summary+="Locale: $(state_get LOCALE en_US.UTF-8)\n";
+    summary+="Keyboard: $(state_get KEYMAP us)\n";
+    summary+="Microcode: $(state_get MICROCODE_OVERRIDE auto)\n";
+    summary+="BTRFS Layout: $(state_get BTRFS_LAYOUT standard)\n";
     summary+="Filesystem: $(state_get FS_TYPE ext4)\n";
     summary+="Init: $(state_get INIT)\n";
     summary+="Bootloader: $(state_get BOOTLOADER grub)\n";

@@ -47,7 +47,7 @@ get_partition_name() {
     local disk="${1}";
     local partition="${2}";
 
-    if [[ "${disk}" =~ (nvme|mmcblk|loop) ]]; then
+    if [[ "${disk}" =~ ^/dev/(nvme|mmcblk|loop) ]]; then
         printf '%sp%s\n' "${disk}" "${partition}";
     else
         printf '%s%s\n' "${disk}" "${partition}";

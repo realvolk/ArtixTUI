@@ -19,8 +19,10 @@ configure_bootloader() {
             grub)
                 printf '[*] Installing GRUB...\n';
 
-                if ! findmnt -rn /mnt/boot/efi >/dev/null 2>&1; then
-                    die 'EFI partition is not mounted at /boot/efi';
+                if ! findmnt -rn -o FSTYPE /mnt/boot/efi \
+                    | grep -qx 'vfat'; then
+
+                    die 'EFI partition is not mounted as vfat at /boot/efi';
                 fi
 
                 if ! artix-chroot /mnt grub-install \
@@ -63,13 +65,20 @@ configure_bootloader() {
                 local kernel_basename;
                 local initramfs_basename;
                 local esp_artix_dir;
+                local microcode_file;
 
                 printf '[*] Configuring EFIStub boot entry...\n';
+
+                command -v efibootmgr >/dev/null 2>&1 \
+                    || die 'efibootmgr is unavailable';
 
                 root_source="$(findmnt -rn -o SOURCE /mnt)";
 
                 [[ -n "${root_source}" ]] \
                     || die 'failed to detect root partition';
+
+                [[ -b "${root_source}" ]] \
+                    || die 'invalid root block device';
 
                 root_uuid="$(
                     blkid -s UUID -o value "${root_source}"
@@ -83,7 +92,9 @@ configure_bootloader() {
                     /mnt/efi \
                     /mnt/boot; do
 
-                    if findmnt -rn "${esp_mount}" >/dev/null 2>&1; then
+                    if findmnt -rn -o FSTYPE "${esp_mount}" \
+                        | grep -qx 'vfat'; then
+
                         esp_source="$(
                             findmnt -rn -o SOURCE "${esp_mount}"
                         )";
@@ -119,29 +130,14 @@ configure_bootloader() {
                 [[ -n "${esp_part}" ]] \
                     || die 'failed to detect EFI partition number';
 
-                kernel_image="$(
-                    find /mnt/boot \
-                        -maxdepth 1 \
-                        -type f \
-                        -name 'vmlinuz-*' \
-                        | sort \
-                        | head -n1
-                )";
+                kernel_image="/mnt/boot/$(state_get KERNEL_IMAGE)";
+                initramfs_image="/mnt/boot/$(state_get INITRAMFS_IMAGE)";
+                microcode_file="$(state_get MICROCODE_IMAGE)";
 
-                [[ -n "${kernel_image}" ]] \
+                [[ -f "${kernel_image}" ]] \
                     || die 'failed to locate kernel image';
 
-                initramfs_image="$(
-                    find /mnt/boot \
-                        -maxdepth 1 \
-                        -type f \
-                        -name 'initramfs-*.img' \
-                        ! -name '*fallback*' \
-                        | sort \
-                        | head -n1
-                )";
-
-                [[ -n "${initramfs_image}" ]] \
+                [[ -f "${initramfs_image}" ]] \
                     || die 'failed to locate initramfs image';
 
                 kernel_basename="$(basename "${kernel_image}")";
@@ -161,16 +157,13 @@ configure_bootloader() {
                 cp -f "${initramfs_image}" \
                     "${esp_artix_dir}/${initramfs_basename}";
 
-                if [[ -f /mnt/boot/intel-ucode.img ]]; then
-                    cp -f /mnt/boot/intel-ucode.img \
-                        "${esp_artix_dir}/intel-ucode.img";
+                if [[ -n "${microcode_file}" ]] \
+                    && [[ -f "/mnt/boot/${microcode_file}" ]]; then
 
-                    microcode_image='initrd=\EFI\Artix\intel-ucode.img'
-                elif [[ -f /mnt/boot/amd-ucode.img ]]; then
-                    cp -f /mnt/boot/amd-ucode.img \
-                        "${esp_artix_dir}/amd-ucode.img";
+                    cp -f "/mnt/boot/${microcode_file}" \
+                        "${esp_artix_dir}/${microcode_file}";
 
-                    microcode_image='initrd=\EFI\Artix\amd-ucode.img'
+                    microcode_image="initrd=\\EFI\\Artix\\${microcode_file}"
                 fi
 
                 loader="\\EFI\\Artix\\${kernel_basename}"
@@ -188,6 +181,11 @@ configure_bootloader() {
 
                 printf '[*] Initramfs image: %s\n' \
                     "${initramfs_basename}";
+
+                if [[ -n "${microcode_file}" ]]; then
+                    printf '[*] Microcode image: %s\n' \
+                        "${microcode_file}";
+                fi
 
                 printf '[*] Creating EFI boot entry...\n';
 

@@ -11,6 +11,12 @@ partition_disk() {
     [[ -n "${disk}" ]] \
         || die 'no disk selected';
 
+    [[ -b "${disk}" ]] \
+        || die 'invalid disk device';
+
+    [[ -n "${disk}" ]] \
+        || die 'no disk selected';
+
     if tui_yesno \
         " Swap Partition " \
         "Would you like to create a swap partition?"; then
@@ -93,6 +99,20 @@ partition_disk() {
         udevadm settle;
 
         sleep 2;
+
+        [[ -b "$(get_partition_name "${disk}" 1)" ]] \
+            || die 'EFI partition was not created';
+
+        if [[ "${swap_enabled}" == 'yes' ]]; then
+            [[ -b "$(get_partition_name "${disk}" 2)" ]] \
+                || die 'swap partition was not created';
+
+            [[ -b "$(get_partition_name "${disk}" 3)" ]] \
+                || die 'root partition was not created';
+        else
+            [[ -b "$(get_partition_name "${disk}" 2)" ]] \
+                || die 'root partition was not created';
+        fi
 
         printf '\n[*] Partitioning complete.\n';
     } 2>&1 | dialog \

@@ -12,6 +12,9 @@ configure_users() {
     root_password="$(state_get ROOT_PASS)";
     shell="$(state_get USER_SHELL /bin/bash)";
 
+    [[ "${username}" =~ ^[a-z_][a-z0-9_-]*$ ]] \
+        || die 'invalid username';
+
     case "${shell}" in
         bash) shell="/bin/bash" ;;
         zsh)  shell="/bin/zsh" ;;

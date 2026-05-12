@@ -6,11 +6,13 @@ mount_filesystems() {
     local fs_type;
     local swap_enabled;
     local bootloader;
+    local btrfs_layout;
 
     disk="$(state_get DISK)";
     fs_type="$(state_get FS_TYPE)";
     swap_enabled="$(state_get SWAP_ENABLED no)";
     bootloader="$(state_get BOOTLOADER grub)";
+    btrfs_layout="$(state_get BTRFS_LAYOUT standard)";
 
     local efi_part;
     local root_part;
@@ -25,7 +27,10 @@ mount_filesystems() {
     fi
 
     if [[ "${bootloader}" == 'efistub' ]]; then
+        mkdir -p /mnt/boot
         efi_mount='/mnt/boot'
+    else
+        mkdir -p /mnt/boot/efi
     fi
 
     {
@@ -59,43 +64,91 @@ mount_filesystems() {
             btrfs)
                 mount "${root_part}" /mnt;
 
+                mountpoint -q /mnt \
+                    || die 'failed to mount root filesystem';
+
                 printf '[*] Creating BTRFS subvolumes...\n';
 
-                for subvol in \
-                    @ \
-                    @home \
-                    @log \
-                    @pkg \
-                    @snapshots; do
+                case "${btrfs_layout}" in
+                    flat)
+                        for subvol in @; do
+                            if ! btrfs subvolume list /mnt \
+                                | awk '{print $NF}' \
+                                | grep -qx "${subvol}"; then
 
-                    if ! btrfs subvolume list /mnt \
-                        | awk '{print $NF}' \
-                        | grep -qx "${subvol}"; then
+                                btrfs subvolume create "/mnt/${subvol}";
+                            fi
+                        done
+                        ;;
 
-                        btrfs subvolume create "/mnt/${subvol}";
-                    fi
-                done
+                    snapshot)
+                        for subvol in \
+                            @ \
+                            @home \
+                            @log \
+                            @pkg \
+                            @snapshots; do
+
+                            if ! btrfs subvolume list /mnt \
+                                | awk '{print $NF}' \
+                                | grep -qx "${subvol}"; then
+
+                                btrfs subvolume create "/mnt/${subvol}";
+                            fi
+                        done
+                        ;;
+
+                    standard|*)
+                        for subvol in \
+                            @ \
+                            @home; do
+
+                            if ! btrfs subvolume list /mnt \
+                                | awk '{print $NF}' \
+                                | grep -qx "${subvol}"; then
+
+                                btrfs subvolume create "/mnt/${subvol}";
+                            fi
+                        done
+                        ;;
+                esac
 
                 umount /mnt;
 
                 mount -o noatime,compress=zstd,subvol=@ \
                     "${root_part}" /mnt;
 
-                mount --mkdir \
-                    -o noatime,compress=zstd,subvol=@home \
-                    "${root_part}" /mnt/home;
+                mountpoint -q /mnt \
+                    || die 'failed to mount root filesystem';
 
-                mount --mkdir \
-                    -o noatime,compress=zstd,subvol=@log \
-                    "${root_part}" /mnt/var/log;
+                case "${btrfs_layout}" in
+                    flat)
+                        ;;
 
-                mount --mkdir \
-                    -o noatime,compress=zstd,subvol=@pkg \
-                    "${root_part}" /mnt/var/cache/pacman/pkg;
+                    snapshot)
+                        mount --mkdir \
+                            -o noatime,compress=zstd,subvol=@home \
+                            "${root_part}" /mnt/home;
 
-                mount --mkdir \
-                    -o noatime,compress=zstd,subvol=@snapshots \
-                    "${root_part}" /mnt/.snapshots;
+                        mount --mkdir \
+                            -o noatime,compress=zstd,subvol=@log \
+                            "${root_part}" /mnt/var/log;
+
+                        mount --mkdir \
+                            -o noatime,compress=zstd,subvol=@pkg \
+                            "${root_part}" /mnt/var/cache/pacman/pkg;
+
+                        mount --mkdir \
+                            -o noatime,compress=zstd,subvol=@snapshots \
+                            "${root_part}" /mnt/.snapshots;
+                        ;;
+
+                    standard|*)
+                        mount --mkdir \
+                            -o noatime,compress=zstd,subvol=@home \
+                            "${root_part}" /mnt/home;
+                        ;;
+                esac
                 ;;
 
             zfs)
@@ -106,10 +159,23 @@ mount_filesystems() {
                     zroot;
 
                 zfs mount zroot/root;
+
+                mountpoint -q /mnt \
+                    || die 'failed to mount ZFS root dataset';
                 ;;
 
-            ext4|xfs|f2fs|bcachefs|exfat)
+            ext4|xfs|f2fs|bcachefs)
                 mount -t "${fs_type}" "${root_part}" /mnt;
+
+                mountpoint -q /mnt \
+                    || die 'failed to mount root filesystem';
+                ;;
+
+            exfat)
+                mount -t exfat "${root_part}" /mnt;
+
+                mountpoint -q /mnt \
+                    || die 'failed to mount root filesystem';
                 ;;
 
             *)
@@ -122,6 +188,9 @@ mount_filesystems() {
         mount -t vfat --mkdir \
             "${efi_part}" \
             "${efi_mount}";
+
+        mountpoint -q "${efi_mount}" \
+            || die 'failed to mount EFI partition';
 
         printf '\n[*] Mount setup completed.\n';
     } 2>&1 | dialog \

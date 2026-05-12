@@ -43,6 +43,11 @@ stage_chroot() {
         fi
     fi
 
+    if ! configure_system; then
+        printf '[!] System configuration failed.\n' >&2;
+        return 1;
+    fi
+
     if ! configure_users; then
         printf '[!] User configuration failed.\n' >&2;
         return 1;

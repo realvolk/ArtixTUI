@@ -35,123 +35,6 @@ installer_error() {
     exit "${rc}";
 }
 
-trap 'installer_abort' INT TERM;
-trap 'installer_error $? ${LINENO}' ERR;
-
-SELF_PATH="$(readlink -f "${BASH_SOURCE[0]}")";
-BASE_DIR="${SELF_PATH%/*}";
-SCRIPT_DIR="${BASE_DIR}/scripts";
-
-source "${SCRIPT_DIR}/common.sh";
-source "${SCRIPT_DIR}/state.sh";
-source "${SCRIPT_DIR}/recovery.sh";
-source "${SCRIPT_DIR}/kernels.sh";
-
-source "${SCRIPT_DIR}/tui/core.sh";
-source "${SCRIPT_DIR}/tui/menus.sh";
-source "${SCRIPT_DIR}/tui/summary.sh";
-
-source "${SCRIPT_DIR}/storage/partition.sh";
-source "${SCRIPT_DIR}/storage/filesystem.sh";
-source "${SCRIPT_DIR}/storage/mount.sh";
-
-source "${SCRIPT_DIR}/install/basestrap.sh";
-source "${SCRIPT_DIR}/install/bootloader.sh";
-source "${SCRIPT_DIR}/install/handoff.sh";
-source "${SCRIPT_DIR}/install/services.sh";
-source "${SCRIPT_DIR}/install/users.sh";
-
-source "${SCRIPT_DIR}/post/drivers.sh";
-source "${SCRIPT_DIR}/post/networking.sh";
-source "${SCRIPT_DIR}/post/desktop.sh";
-source "${SCRIPT_DIR}/post/audio.sh";
-source "${SCRIPT_DIR}/post/extras.sh";
-
-source "${SCRIPT_DIR}/stages/preflight.sh";
-source "${SCRIPT_DIR}/stages/storage.sh";
-source "${SCRIPT_DIR}/stages/base.sh";
-source "${SCRIPT_DIR}/stages/chroot.sh";
-source "${SCRIPT_DIR}/stages/post.sh";
-source "${SCRIPT_DIR}/stages/finalize.sh";
-
-MODE="";
-DEBUG="false";
-ARGV=();
-
-parse_docblock() {
-    local esc;
-    local help="${1}";
-
-    printf -v esc '\033';
-
-    help="$(sed -E \
-        's/^[[:space:]]*#\|[[:space:]]?//g' \
-        <<< "${help}")";
-
-    help="$(sed -E \
-        "s/\{e:([0-9a-zA-Z;]+)\}/${esc}[\1/g" \
-        <<< "${help}")";
-
-    printf '%s\n' "${help}";
-}
-
-extract_docblock() {
-    local function_name="${1}";
-    local line;
-    local docblock='';
-    local -a buffer=();
-
-    while IFS= read -r line || [[ -n "${line}" ]]; do
-        if [[ "${line}" =~ ^[[:space:]]*#\| ]]; then
-            buffer+=("${line}");
-            continue;
-        fi;
-
-        if [[ "${line}" =~ ${function_name}\(\) ]]; then
-            if [[ ${#buffer[@]} -gt 0 ]]; then
-                printf -v docblock '%s\n' "${buffer[@]}";
-                break;
-            fi;
-        fi;
-
-        buffer=();
-    done < "${SELF_PATH}";
-
-    [[ -n "${docblock}" ]] \
-        || die 'documentation not found';
-
-    parse_docblock "${docblock}";
-}
-
-validate_mode_flags() {
-    local mode_count=0;
-
-    [[ "${MODE}" == 'auto' ]] \
-        && ((++mode_count));
-
-    [[ "${MODE}" == 'manual' ]] \
-        && ((++mode_count))
-
-    [[ "${MODE}" == 'resume' ]] \
-        && ((++mode_count))
-
-    [[ "${MODE}" == 'recovery' ]] \
-        && ((++mode_count))
-
-    if (( mode_count > 1 )); then
-        printf '[!] Conflicting installation mode flags detected.\n' \
-            >&2;
-
-        printf '[!] Use only ONE of:\n' >&2;
-        printf '    -a / --auto\n' >&2;
-        printf '    -m / --manual\n' >&2;
-        printf '    -r / --resume\n' >&2;
-        printf '    -rr / --recovery\n' >&2;
-
-        exit 1;
-    fi
-}
-
 self_update_installer() {
     local -a restart_args=("$@");
     local repo_url;
@@ -279,6 +162,135 @@ Continue using the outdated version?"; then
     fi
 }
 
+verify_installer_layout() {
+    local required_files=(
+        common.sh
+        state.sh
+        recovery.sh
+        kernels.sh
+    );
+
+    local required_dirs=(
+        tui
+        storage
+        install
+        post
+        stages
+    );
+
+    local file;
+    local dir;
+
+    for file in "${required_files[@]}"; do
+        [[ -f "${SCRIPT_DIR}/${file}" ]] \
+            || return 1;
+    done
+
+    for dir in "${required_dirs[@]}"; do
+        [[ -d "${SCRIPT_DIR}/${dir}" ]] \
+            || return 1;
+    done
+
+    return 0;
+}
+
+source_tree() {
+    local dir;
+    local file;
+
+    for dir in "$@"; do
+        [[ -d "${SCRIPT_DIR}/${dir}" ]] \
+            || die "missing script directory: ${dir}";
+
+        while IFS= read -r -d '' file; do
+            # shellcheck source=/dev/null
+            source "${file}";
+        done < <(
+            find "${SCRIPT_DIR}/${dir}" \
+                -maxdepth 1 \
+                -type f \
+                -name '*.sh' \
+                -print0 \
+                | sort -z
+        )
+    done
+}
+
+trap 'installer_abort' INT TERM;
+trap 'installer_error $? ${LINENO}' ERR;
+
+if ! verify_installer_layout; then
+    printf '[*] Installer layout is incomplete.\n';
+    printf '[*] Attempting automatic repair...\n';
+
+    if ! self_update_installer; then
+        die 'failed to repair installer layout';
+    fi
+
+    exit 0;
+fi
+
+source "${SCRIPT_DIR}/common.sh";
+source "${SCRIPT_DIR}/state.sh";
+source "${SCRIPT_DIR}/recovery.sh";
+source "${SCRIPT_DIR}/kernels.sh";
+
+source_tree \
+    tui \
+    storage \
+    install \
+    post \
+    stages
+
+MODE="";
+DEBUG="false";
+ARGV=();
+
+parse_docblock() {
+    local esc;
+    local help="${1}";
+
+    printf -v esc '\033';
+
+    help="$(sed -E \
+        's/^[[:space:]]*#\|[[:space:]]?//g' \
+        <<< "${help}")";
+
+    help="$(sed -E \
+        "s/\{e:([0-9a-zA-Z;]+)\}/${esc}[\1/g" \
+        <<< "${help}")";
+
+    printf '%s\n' "${help}";
+}
+
+extract_docblock() {
+    local function_name="${1}";
+    local line;
+    local docblock='';
+    local -a buffer=();
+
+    while IFS= read -r line || [[ -n "${line}" ]]; do
+        if [[ "${line}" =~ ^[[:space:]]*#\| ]]; then
+            buffer+=("${line}");
+            continue;
+        fi;
+
+        if [[ "${line}" =~ ${function_name}\(\) ]]; then
+            if [[ ${#buffer[@]} -gt 0 ]]; then
+                printf -v docblock '%s\n' "${buffer[@]}";
+                break;
+            fi;
+        fi;
+
+        buffer=();
+    done < "${SELF_PATH}";
+
+    [[ -n "${docblock}" ]] \
+        || die 'documentation not found';
+
+    parse_docblock "${docblock}";
+}
+
 run_install_pipeline() {
     stage_preflight \
         || die 'preflight stage failed';
@@ -389,7 +401,6 @@ main() {
 
     require_root;
     require_efi;
-    check_installer_version "$@";
 
     while [[ $# -gt 0 ]]; do
         case "${1}" in
@@ -442,8 +453,6 @@ main() {
         esac;
     done;
 
-    validate_mode_flags;
-
     if [[ "${DEBUG}" == 'true' ]]; then
         export ARTIX_DEBUG='true';
 
@@ -454,6 +463,8 @@ main() {
 
         set -x
     fi
+
+    check_installer_version "${ARGV[@]}";
 
     case "${MODE}" in
         auto)

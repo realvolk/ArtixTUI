@@ -4,7 +4,7 @@ Modular TUI installer for Artix Linux.
 
 Designed for users who want a configurable Artix setup without manually performing every installation step.
 
-#### Version: v6.3.3.0
+#### Version: v6.4.1.0
 *(Rewrite / Major Release / New Feature / Major bug fix / Minor bug fix / Hot fix)*
 
 ---
@@ -66,18 +66,46 @@ Available kernel choices:
 - Bazzite Kernel
 
 ## Filesystem Support
-Supported filesystems:
 
-- ext4
+### Supported Filesystems
+- EXT4
 - BTRFS
 - XFS
 - F2FS
 - Bcachefs
 - exFAT
-- ZFS
+- ZFS (experimental)
 
-Filesystem utilities and kernel modules required by the selected filesystem
-(e.g. `f2fs-tools`, `dosfstools`, `xfsprogs`, etc.) are automatically handled inside the live environment when needed.
+### BTRFS Layouts
+ArtixTUI supports multiple BTRFS subvolume layouts:
+
+| Layout | Description |
+|---|---|
+| `standard` | Creates `@`, `@home`, `@log`, `@pkg`, and `@snapshots` subvolumes |
+| `flat` | Creates a minimal flat subvolume layout |
+| `snapshot` | Snapshot-oriented layout for rollback-focused setups |
+
+### EFIStub Support
+EFIStub booting is fully supported.
+
+When EFIStub is selected:
+- Kernel and initramfs are copied into `EFI/Artix`
+- Microcode images are automatically detected and included
+- EFI boot entries are created using `efibootmgr`
+- `/boot` is mounted directly as the EFI partition
+
+### Experimental Features
+The following features are considered experimental:
+- ZFS root installations
+- Bcachefs root installations
+- TKG kernel support
+- MangoWM automated build/install flow
+
+### Notes
+- ZFS requires a ZFS-capable live ISO/kernel
+- linux-libre may disable Wi-Fi, Bluetooth, NVIDIA, and other proprietary hardware support
+- Some custom kernels require third-party repositories
+- Chaotic-AUR and CachyOS repositories are configured automatically when required
 
 ## GPU Driver Detection
 Automatic GPU and virtualization detection.

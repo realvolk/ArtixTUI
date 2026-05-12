@@ -10,6 +10,10 @@ install_base_system() {
     local user_shell;
     local display_manager;
     local wm_de;
+    local locale;
+    local keymap;
+    local timezone;
+    local microcode_override;
 
     init="$(state_get INIT)";
     kernel="$(state_get KERNEL_CHOICE linux)";
@@ -19,6 +23,10 @@ install_base_system() {
     user_shell="$(state_get USER_SHELL bash)";
     display_manager="$(state_get DISPLAY_MANAGER none)";
     wm_de="$(state_get WM_DE none)";
+    locale="$(state_get LOCALE en_US.UTF-8)";
+    keymap="$(state_get KEYMAP us)";
+    timezone="$(state_get TIMEZONE UTC)";
+    microcode_override="$(state_get MICROCODE_OVERRIDE auto)";
 
     detect_kernel_package "${kernel}";
 
@@ -26,6 +34,20 @@ install_base_system() {
 
     grep -q 'GenuineIntel' /proc/cpuinfo \
         && ucode='intel-ucode';
+
+    case "${microcode_override}" in
+        intel)
+            ucode='intel-ucode';
+            ;;
+
+        amd)
+            ucode='amd-ucode';
+            ;;
+
+        none)
+            ucode='';
+            ;;
+    esac
 
     local pkgs=(
         base
@@ -43,7 +65,6 @@ install_base_system() {
         pciutils
         dialog
 
-        "${ucode}"
         "${init}"
 
         dbus
@@ -51,6 +72,9 @@ install_base_system() {
         efibootmgr
         dosfstools
     );
+
+    [[ -n "${ucode}" ]] \
+        && pkgs+=("${ucode}");
 
     case "${wm_de}" in
         hyprland|mango|niri|sway)
@@ -438,6 +462,33 @@ EOF
 
         basestrap /mnt "${pkgs[@]}" \
             2>&1 | tee -a "${debug_log}";
+
+        printf '[*] Configuring locale...\n';
+
+        artix-chroot /mnt /bin/bash -c "
+grep -q '^${locale} UTF-8' /etc/locale.gen \
+    || echo '${locale} UTF-8' >> /etc/locale.gen
+
+locale-gen
+
+cat > /etc/locale.conf <<EOF
+LANG=${locale}
+EOF
+"
+
+        printf '[*] Configuring keymap...\n';
+
+        cat <<EOF > /mnt/etc/vconsole.conf
+KEYMAP=${keymap}
+EOF
+
+        printf '[*] Configuring timezone...\n';
+
+        artix-chroot /mnt ln -sf \
+            \"/usr/share/zoneinfo/${timezone}\" \
+            /etc/localtime;
+
+        artix-chroot /mnt hwclock --systohc;
 
         if [[ "${kernel}" == 'tkg' ]]; then
             printf '[*] Cloning linux-tkg repository...\n';

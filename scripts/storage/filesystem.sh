@@ -27,10 +27,16 @@ create_filesystems() {
         root_part=$(get_partition_name "${disk}" 2);
     fi
 
-    [[ "${efi_part}" =~ ^${disk} ]] \
+    [[ -b "${efi_part}" ]] \
+        || die "invalid EFI partition: ${efi_part}";
+
+    [[ -b "${root_part}" ]] \
+        || die "invalid root partition: ${root_part}";
+
+    [[ "/dev/$(lsblk -no PKNAME "${efi_part}")" == "${disk}" ]] \
         || die "EFI partition does not belong to selected disk";
 
-    [[ "${root_part}" =~ ^${disk} ]] \
+    [[ "/dev/$(lsblk -no PKNAME "${root_part}")" == "${disk}" ]] \
         || die "Root partition does not belong to selected disk";
 
     {
@@ -120,6 +126,9 @@ Please use a ZFS-capable ISO/kernel." \
         if [[ "${swap_enabled}" == 'yes' ]]; then
             printf '[*] Initializing swap...\n';
 
+            [[ -b "${swap_part}" ]] \
+                || die "invalid swap partition: ${swap_part}";
+
             mkswap "${swap_part}";
             swapon "${swap_part}";
         fi
@@ -185,6 +194,10 @@ Please use a ZFS-capable ISO/kernel." \
                 zfs create \
                     -o mountpoint=/ \
                     zroot/root;
+
+                zfs mount zroot/root;
+
+                mkdir -p /mnt/boot;
                 ;;
         esac
 

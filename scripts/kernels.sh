@@ -78,4 +78,10 @@ detect_kernel_package() {
             die "unsupported kernel: ${kernel}";
             ;;
     esac
+
+    [[ -n "${KERNEL_PACKAGE}" ]] \
+        || die 'failed to detect kernel package';
+
+    [[ -n "${KERNEL_HEADERS}" ]] \
+        || die 'failed to detect kernel headers';
 }
