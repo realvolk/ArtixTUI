@@ -6,7 +6,7 @@ CHROOT_LOG="/mnt/var/log/artix-installer.log"
 
 _ensure_log_dirs() {
     mkdir -p "$(dirname "${LOG_FILE}")"
-    [[ -d /mnt ]] && mkdir -p "$(dirname "${CHROOT_LOG}")" || true
+    [[ -d /mnt ]] && mkdir -p "$(dirname "${CHROOT_LOG}")" 2>/dev/null || true
 }
 
 log_info() {
@@ -33,28 +33,29 @@ tui_msg() {
     local title="${1}" msg="${2}"
     gum style --bold --foreground 212 "── ${title} ──"
     gum format "${msg}"
-    gum confirm "Press Enter to continue" --affirmative="OK" --timeout=0 2>/dev/null || true
+    gum confirm "Press Enter to continue" --affirmative="OK" --timeout=0 </dev/tty 2>/dev/null || true
 }
 
 tui_yesno() {
     local title="${1}" msg="${2}"
     gum style --bold --foreground 212 "── ${title} ──"
     gum format "${msg}"
-    gum confirm
+    gum confirm </dev/tty
 }
 
 tui_input() {
-    local title="${1}" msg="${2}" default="${3:-}"
+    local title="${1}" msg="${2}" default="${3:-}" result
     gum style --bold --foreground 212 "── ${title} ──"
     [[ -n "${msg}" ]] && gum format "${msg}"
-    gum input --placeholder "${default}" --prompt "> "
+    result=$(gum input --placeholder "${default}" --prompt "> " </dev/tty) || true
+    printf '%s' "${result}"
 }
 
 tui_password() {
     local title="${1}" msg="${2}"
     gum style --bold --foreground 212 "── ${title} ──"
     [[ -n "${msg}" ]] && gum format "${msg}"
-    gum input --password --prompt "> "
+    gum input --password --prompt "> " </dev/tty || true
 }
 
 tui_password_confirm() {
@@ -62,9 +63,9 @@ tui_password_confirm() {
     local pass confirm
     while true; do
         gum style --bold --foreground 212 "── ${title} ──"
-        pass=$(gum input --password --prompt "${prompt}: ")
+        pass=$(gum input --password --prompt "${prompt}: " </dev/tty) || true
         [[ -n "${pass}" ]] || return 1
-        confirm=$(gum input --password --prompt "${confirm_prompt}: ")
+        confirm=$(gum input --password --prompt "${confirm_prompt}: " </dev/tty) || true
         [[ -n "${confirm}" ]] || return 1
         if [[ "${pass}" == "${confirm}" ]]; then
             printf '%s\n' "${pass}"
@@ -79,7 +80,7 @@ tui_menu() {
     shift 2
     gum style --bold --foreground 212 "── ${title} ──"
     [[ -n "${msg}" ]] && gum format "${msg}"
-    gum choose --height=15 "$@"
+    gum choose --height=15 "$@" </dev/tty
 }
 
 tui_menu_custom() {
@@ -88,7 +89,7 @@ tui_menu_custom() {
     shift 3
     gum style --bold --foreground 212 "── ${title} ──"
     [[ -n "${msg}" ]] && gum format "${msg}"
-    gum choose --height="${height}" "$@"
+    gum choose --height="${height}" "$@" </dev/tty
 }
 
 tui_checklist() {
@@ -96,7 +97,7 @@ tui_checklist() {
     shift 2
     gum style --bold --foreground 212 "── ${title} ──"
     [[ -n "${msg}" ]] && gum format "${msg}"
-    gum choose --no-limit --height=15 "$@"
+    gum choose --no-limit --height=15 "$@" </dev/tty
 }
 
 tui_radiolist() {
