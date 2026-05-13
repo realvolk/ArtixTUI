@@ -59,17 +59,34 @@ Server = https://archzfs.com/$repo/x86_64
 EOF
                     pacman -Sy --noconfirm
                 fi
+
                 pkgs+=(zfs-utils dkms zfs-dkms)
-                local kver hdr_pkg
+                local kver running_kernel_pkg headers_pkg
                 kver=$(uname -r)
-                if [[ "${kver}" == *-lts* ]]; then hdr_pkg='linux-lts-headers'
-                elif [[ "${kver}" == *-zen* ]]; then hdr_pkg='linux-zen-headers'
-                elif [[ "${kver}" == *-hardened* ]]; then hdr_pkg='linux-hardened-headers'
-                else hdr_pkg='linux-headers'; fi
-                if pacman -Si "${hdr_pkg}" &>/dev/null; then pkgs+=("${hdr_pkg}")
+
+                running_kernel_pkg=$(pacman -Qqo /lib/modules 2>/dev/null || true)
+                if [[ -z "${running_kernel_pkg}" ]]; then
+                    for candidate in linux linux-lts linux-zen linux-hardened; do
+                        if pacman -Qq "${candidate}" &>/dev/null; then
+                            running_kernel_pkg="${candidate}"
+                            break
+                        fi
+                    done
+                fi
+
+                if [[ -n "${running_kernel_pkg}" ]]; then
+                    headers_pkg="${running_kernel_pkg}-headers"
+                    if pacman -Si "${headers_pkg}" &>/dev/null; then
+                        pkgs+=("${headers_pkg}")
+                    else
+                        die "Kernel headers package '${headers_pkg}' not found for running kernel '${running_kernel_pkg}'"
+                    fi
                 else
-                    hdr_pkg=$(pacman -Qsq 'linux[0-9]*-headers' 2>/dev/null | head -n1)
-                    [[ -n "${hdr_pkg}" ]] && pkgs+=("${hdr_pkg}") || die "Cannot determine kernel headers for ${kver}"
+                    if pacman -Si "linux-headers-${kver}" &>/dev/null; then
+                        pkgs+=("linux-headers-${kver}")
+                    else
+                        die "Cannot find kernel headers for ${kver}. ZFS requires matching kernel headers."
+                    fi
                 fi
             fi
             ;;
@@ -83,19 +100,14 @@ EOF
     fi;
     
     if [[ "${fs_type}" == 'zfs' ]]; then
-        local kver dkms_log
+        local kver
         kver=$(uname -r)
-        local kver_major kver_minor
-        kver_major=$(echo "${kver}" | grep -oP '^\d+')
-        kver_minor=$(echo "${kver}" | grep -oP '^\d+\.\K\d+')
-        if [[ "${kver_major}" -gt 6 || ( "${kver_major}" -eq 6 && "${kver_minor}" -gt 12 ) ]]; then
-            log_warn "Kernel ${kver} may be too new for ZFS (supports up to 6.12)."
-        fi
-
         if ! modprobe zfs 2>/dev/null; then
             log_info "Building ZFS module for kernel ${kver}..."
-            dkms_log=$(dkms autoinstall 2>&1) || true
-            log_info "DKMS output: ${dkms_log}"
+            local dkms_output dkms_rc
+            dkms_output=$(dkms autoinstall 2>&1) || true
+            dkms_rc=$?
+            log_info "DKMS output: ${dkms_output}"
 
             local waited=0
             while dkms status 2>/dev/null | grep -q 'zfs.*: added'; do
@@ -119,8 +131,8 @@ EOF
                     log_error "Last 20 lines of ${make_log}:"
                     tail -n 20 "${make_log}" | while IFS= read -r line; do log_error "  ${line}"; done
                 fi
-                log_error "Your kernel (${kver}) is too new for the available zfs-dkms."
-                log_error "Use a live ISO with an LTS kernel for ZFS support."
+                log_error "Your kernel (${kver}) may be incompatible with the available zfs-dkms."
+                log_error "Consider using a live ISO with a standard kernel (linux or linux-lts)."
                 return 1
             fi
         else
