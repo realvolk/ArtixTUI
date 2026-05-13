@@ -11,9 +11,18 @@ mount_filesystems() {
 
     local efi_part root_part efi_mount='/mnt/boot/efi'
     efi_part=$(get_partition_name "${disk}" 1)
-    if [[ "${swap_enabled}" == 'yes' ]]; then root_part=$(get_partition_name "${disk}" 3); else root_part=$(get_partition_name "${disk}" 2); fi
+    if [[ "${swap_enabled}" == 'yes' ]]; then
+        root_part=$(get_partition_name "${disk}" 3)
+    else
+        root_part=$(get_partition_name "${disk}" 2)
+    fi
 
-    if [[ "${bootloader}" == 'efistub' ]]; then mkdir -p /mnt/boot; efi_mount='/mnt/boot'; else mkdir -p /mnt/boot/efi; fi
+    if [[ "${bootloader}" == 'efistub' ]]; then
+        mkdir -p /mnt/boot
+        efi_mount='/mnt/boot'
+    else
+        mkdir -p /mnt/boot/efi
+    fi
 
     case "${fs_type}" in
         btrfs) modprobe btrfs 2>/dev/null || true ;;
@@ -29,28 +38,66 @@ mount_filesystems() {
         btrfs)
             mount "${root_part}" /mnt
             mountpoint -q /mnt || die 'failed to mount root filesystem'
+
             log_info "Creating BTRFS subvolumes..."
             case "${btrfs_layout}" in
-                flat)       for subvol in @; do ... done ;;
-                snapshot)   for subvol in @ @home @log @pkg @snapshots; do ... done ;;
-                standard|*) for subvol in @ @home; do ... done ;;
+                flat)
+                    for subvol in @; do
+                        if ! btrfs subvolume list /mnt | awk '{print $NF}' | grep -qx "${subvol}"; then
+                            btrfs subvolume create "/mnt/${subvol}"
+                        fi
+                    done
+                    ;;
+                snapshot)
+                    for subvol in @ @home @log @pkg @snapshots; do
+                        if ! btrfs subvolume list /mnt | awk '{print $NF}' | grep -qx "${subvol}"; then
+                            btrfs subvolume create "/mnt/${subvol}"
+                        fi
+                    done
+                    ;;
+                standard|*)
+                    for subvol in @ @home; do
+                        if ! btrfs subvolume list /mnt | awk '{print $NF}' | grep -qx "${subvol}"; then
+                            btrfs subvolume create "/mnt/${subvol}"
+                        fi
+                    done
+                    ;;
             esac
+
             umount /mnt
             mount -o noatime,compress=zstd,subvol=@ "${root_part}" /mnt
             mountpoint -q /mnt || die 'failed to mount root filesystem'
+
+            case "${btrfs_layout}" in
+                flat) ;;
+                snapshot)
+                    mount --mkdir -o noatime,compress=zstd,subvol=@home "${root_part}" /mnt/home
+                    mount --mkdir -o noatime,compress=zstd,subvol=@log "${root_part}" /mnt/var/log
+                    mount --mkdir -o noatime,compress=zstd,subvol=@pkg "${root_part}" /mnt/var/cache/pacman/pkg
+                    mount --mkdir -o noatime,compress=zstd,subvol=@snapshots "${root_part}" /mnt/.snapshots
+                    ;;
+                standard|*)
+                    mount --mkdir -o noatime,compress=zstd,subvol=@home "${root_part}" /mnt/home
+                    ;;
+            esac
             ;;
         zfs)
             zpool export zroot 2>/dev/null || true
             zpool import -R /mnt zroot
             zfs mount zroot/root
-            mountpoint -q /mnt || die 'failed to mount ZFS root dataset' ;;
+            mountpoint -q /mnt || die 'failed to mount ZFS root dataset'
+            ;;
         ext4|xfs|f2fs|bcachefs)
             mount -t "${fs_type}" "${root_part}" /mnt
-            mountpoint -q /mnt || die 'failed to mount root filesystem' ;;
+            mountpoint -q /mnt || die 'failed to mount root filesystem'
+            ;;
         exfat)
             mount -t exfat "${root_part}" /mnt
-            mountpoint -q /mnt || die 'failed to mount root filesystem' ;;
-        *) die "unsupported filesystem: ${fs_type}" ;;
+            mountpoint -q /mnt || die 'failed to mount root filesystem'
+            ;;
+        *)
+            die "unsupported filesystem: ${fs_type}"
+            ;;
     esac
 
     log_info "Mounting EFI partition..."
