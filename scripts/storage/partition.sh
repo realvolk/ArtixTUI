@@ -14,7 +14,7 @@ partition_disk() {
         if [[ "${mem_gib}" -le 8 ]]; then swap_size='4G'
         elif [[ "${mem_gib}" -le 16 ]]; then swap_size='8G'
         else swap_size='16G'; fi
-        swap_size=$(tui_input "Swap Size" "Recommended: ${swap_size}\n\nEnter swap size:" "${swap_size}")
+        swap_size=$(tui_input "Swap Size" $'Recommended swap size: '"${swap_size}"$'\n\nEnter desired swap size:' "${swap_size}")
         [[ -n "${swap_size}" ]] || die 'invalid swap size'
     fi
     state_set SWAP_ENABLED "${swap_enabled}"

@@ -147,11 +147,11 @@ tui_select_arch_repos() {
     if [[ "${required}" == "yes" ]]; then
         local reason_list
         reason_list=$(printf ' - %s\n' "${reasons[@]}")
-        tui_msg "Arch Repositories Required" "Enabling official Arch repositories because:\n${reason_list}"
+        tui_msg_quick "Arch Repositories Required" $'Enabling official Arch repositories because:\n\n'"${reason_list}"
         state_set ENABLE_ARCH_REPOS "yes"
         return 0
     fi
-
+    
     if tui_yesno "Arch Repositories" "Enable official Arch repositories?"; then
         state_set ENABLE_ARCH_REPOS "yes"
     else
@@ -192,15 +192,13 @@ tui_select_hostname() {
     local h
     while true; do
         h=$(tui_input "Hostname" "Enter system hostname:" "artix") || return 1
-        # Trim all whitespace and carriage returns
         h="${h//[$'\r'$'\n'$'\t' ]/}"
         [[ -n "${h}" ]] || return 1
         if [[ "${h}" =~ ^[a-zA-Z0-9][a-zA-Z0-9\-]*$ ]]; then
             state_set HOSTNAME "${h}"
             return 0
         fi
-        tui_msg "Invalid Hostname" "Allowed: a-z, A-Z, 0-9, dash. Start with letter/digit."
-    done
+        tui_msg_quick "Invalid Hostname" "Allowed: a-z, A-Z, 0-9, dash. Start with letter/digit."    done
 }
 
 tui_select_timezone() {
@@ -208,8 +206,7 @@ tui_select_timezone() {
     while true; do
         tz=$(tui_input "Timezone" "Enter timezone (Region/City):" "Europe/Belgrade") || return 1
         if [[ -f "/usr/share/zoneinfo/${tz}" ]]; then break; fi
-        tui_msg "Invalid Timezone" "Timezone not found. Example: Europe/London"
-    done
+        tui_msg_quick "Invalid Timezone" "Timezone not found. Example: Europe/London"    done
     state_set TIMEZONE "${tz}"
 }
 

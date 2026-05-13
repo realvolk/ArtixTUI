@@ -72,8 +72,20 @@ stage_preflight() {
                 || pkgs+=(bcachefs-tools);
             ;;
         zfs)
-            command_exists zpool \
-                || pkgs+=(zfs-utils);
+            if ! command_exists zpool || ! modprobe zfs 2>/dev/null; then
+                pkgs+=(zfs-utils dkms zfs-dkms)
+                local kver
+                kver=$(uname -r)
+                if [[ "${kver}" == *-lts* ]]; then
+                    pkgs+=(linux-lts-headers)
+                elif [[ "${kver}" == *-zen* ]]; then
+                    pkgs+=(linux-zen-headers)
+                elif [[ "${kver}" == *-hardened* ]]; then
+                    pkgs+=(linux-hardened-headers)
+                else
+                    pkgs+=(linux-headers)
+                fi
+            fi
             ;;
     esac
 
@@ -85,6 +97,11 @@ stage_preflight() {
 
         log_info "Preflight dependencies installed.";
     fi;
+
+    # Ensure ZFS module is loaded after installation
+    if [[ "${fs_type}" == 'zfs' ]]; then
+        modprobe zfs 2>/dev/null || die 'ZFS kernel module still unavailable after installation'
+    fi
 
     stage_mark_done preflight;
 }
