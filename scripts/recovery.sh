@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail;
 
-ROOT="${1:-/mnt}";
+readonly ROOT="/mnt";
 
 validate_recovery_root() {
     mountpoint -q "${ROOT}" \
@@ -257,9 +257,9 @@ detect_extras() {
     pacman_root_has ufw && extras+=(ufw)
     pacman_root_has bluez && extras+=(bluez)
 
-    pacman_root_has zram-generator \
-        || pacman_root_has zramen \
-        && extras+=(zram-tools)
+    if pacman_root_has zram-generator || pacman_root_has zramen; then
+        extras+=(zram-tools)
+    fi
 
     pacman_root_has fzf && extras+=(fzf)
     pacman_root_has zoxide && extras+=(zoxide)
@@ -347,6 +347,7 @@ detect_luks() {
 detect_disk() {
     local source;
     local pkname;
+    local disk_pkname;
 
     source="$(
         findmnt -no SOURCE "${ROOT}" \
@@ -364,7 +365,17 @@ detect_disk() {
     )";
 
     if [[ -n "${pkname}" ]]; then
-        state_set DISK "/dev/${pkname}";
+        disk_pkname="$(
+            lsblk -no PKNAME "/dev/${pkname}" \
+                2>/dev/null \
+                || true
+        )";
+
+        if [[ -n "${disk_pkname}" ]]; then
+            state_set DISK "/dev/${disk_pkname}";
+        else
+            state_set DISK "/dev/${pkname}";
+        fi
     else
         state_set DISK "${source}";
     fi

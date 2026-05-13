@@ -1,91 +1,85 @@
 #!/usr/bin/env bash
-set -Eeuo pipefail;
+set -Eeuo pipefail
 
-readonly STATE_ROOT="/tmp/artix-installer";
-readonly STATE_FILE="${STATE_ROOT}/state.conf";
-
-readonly STAGE_DIR="${STATE_ROOT}/stages";
-readonly LOG_DIR="${STATE_ROOT}/logs";
+readonly STATE_ROOT="/tmp/artix-installer"
+readonly STATE_FILE="${STATE_ROOT}/state.conf"
+readonly STAGE_DIR="${STATE_ROOT}/stages"
+readonly LOG_DIR="${STATE_ROOT}/logs"
 
 ensure_state_dirs() {
-    mkdir -p \
-        "${STATE_ROOT}" \
-        "${STAGE_DIR}" \
-        "${LOG_DIR}";
+    mkdir -p "${STATE_ROOT}" "${STAGE_DIR}" "${LOG_DIR}"
 }
 
 state_save() {
-    ensure_state_dirs;
-
-    cat <<EOF > "${STATE_FILE}"
-DISK="${DISK:-}"
-FS_TYPE="${FS_TYPE:-}"
-INIT="${INIT:-}"
-USE_LUKS="${USE_LUKS:-}"
-LUKS_PASS="${LUKS_PASS:-}"
-BOOTLOADER="${BOOTLOADER:-}"
-DISPLAY_MANAGER="${DISPLAY_MANAGER:-none}"
-AUDIO_STACK="${AUDIO_STACK:-pipewire}"
-SWAP_ENABLED="${SWAP_ENABLED:-no}"
-SWAP_SIZE="${SWAP_SIZE:-0}"
-EXTRAS="${EXTRAS:-}"
-KERNEL_CHOICE="${KERNEL_CHOICE:-}"
-KERNEL_IMAGE="${KERNEL_IMAGE:-}"
-INITRAMFS_IMAGE="${INITRAMFS_IMAGE:-}"
-MICROCODE_IMAGE="${MICROCODE_IMAGE:-}"
-MICROCODE_OVERRIDE="${MICROCODE_OVERRIDE:-auto}"
-HOSTNAME="${HOSTNAME:-artix}"
-TIMEZONE="${TIMEZONE:-Europe/Belgrade}"
-LOCALE="${LOCALE:-en_US.UTF-8}"
-KEYMAP="${KEYMAP:-us}"
-BTRFS_LAYOUT="${BTRFS_LAYOUT:-standard}"
-WM_DE="${WM_DE:-}"
-KDE_PROFILE="${KDE_PROFILE:-desktop}"
-USER_NAME="${USER_NAME:-}"
-USER_PASS="${USER_PASS:-}"
-ROOT_PASS="${ROOT_PASS:-}"
-USER_SHELL="${USER_SHELL:-/bin/bash}"
-NETWORK_STACK="${NETWORK_STACK:-dhcpcd+iwd}"
-ALLOW_OFFLINE="${ALLOW_OFFLINE:-no}"
-X_STACK="${X_STACK:-xorg}"
-ENABLE_ARCH_REPOS="${ENABLE_ARCH_REPOS:-no}"
-EOF
-
-    chmod 600 "${STATE_FILE}";
+    ensure_state_dirs
+    {
+        printf 'DISK=%q\n'                  "${DISK:-}"
+        printf 'FS_TYPE=%q\n'               "${FS_TYPE:-}"
+        printf 'INIT=%q\n'                  "${INIT:-}"
+        printf 'USE_LUKS=%q\n'              "${USE_LUKS:-}"
+        printf 'LUKS_PASS=%q\n'             "${LUKS_PASS:-}"
+        printf 'BOOTLOADER=%q\n'            "${BOOTLOADER:-}"
+        printf 'DISPLAY_MANAGER=%q\n'       "${DISPLAY_MANAGER:-none}"
+        printf 'AUDIO_STACK=%q\n'           "${AUDIO_STACK:-pipewire}"
+        printf 'SWAP_ENABLED=%q\n'          "${SWAP_ENABLED:-no}"
+        printf 'SWAP_SIZE=%q\n'             "${SWAP_SIZE:-0}"
+        printf 'EXTRAS=%q\n'                "${EXTRAS:-}"
+        printf 'KERNEL_CHOICE=%q\n'         "${KERNEL_CHOICE:-}"
+        printf 'KERNEL_IMAGE=%q\n'          "${KERNEL_IMAGE:-}"
+        printf 'INITRAMFS_IMAGE=%q\n'       "${INITRAMFS_IMAGE:-}"
+        printf 'MICROCODE_IMAGE=%q\n'       "${MICROCODE_IMAGE:-}"
+        printf 'MICROCODE_OVERRIDE=%q\n'    "${MICROCODE_OVERRIDE:-auto}"
+        printf 'HOSTNAME=%q\n'              "${HOSTNAME:-artix}"
+        printf 'TIMEZONE=%q\n'              "${TIMEZONE:-Europe/Belgrade}"
+        printf 'LOCALE=%q\n'                "${LOCALE:-en_US.UTF-8}"
+        printf 'KEYMAP=%q\n'                "${KEYMAP:-us}"
+        printf 'BTRFS_LAYOUT=%q\n'          "${BTRFS_LAYOUT:-standard}"
+        printf 'WM_DE=%q\n'                 "${WM_DE:-}"
+        printf 'KDE_PROFILE=%q\n'           "${KDE_PROFILE:-desktop}"
+        printf 'USER_NAME=%q\n'             "${USER_NAME:-}"
+        printf 'USER_PASS=%q\n'             "${USER_PASS:-}"
+        printf 'ROOT_PASS=%q\n'             "${ROOT_PASS:-}"
+        printf 'USER_SHELL=%q\n'            "${USER_SHELL:-/bin/bash}"
+        printf 'NETWORK_STACK=%q\n'         "${NETWORK_STACK:-dhcpcd+iwd}"
+        printf 'ALLOW_OFFLINE=%q\n'         "${ALLOW_OFFLINE:-no}"
+        printf 'X_STACK=%q\n'               "${X_STACK:-xorg}"
+        printf 'ENABLE_ARCH_REPOS=%q\n'     "${ENABLE_ARCH_REPOS:-no}"
+    } > "${STATE_FILE}"
+    chmod 600 "${STATE_FILE}"
 }
 
 state_load() {
-    [[ -f "${STATE_FILE}" ]] || return 0;
-    source "${STATE_FILE}";
+    [[ -f "${STATE_FILE}" ]] || return 0
+    source "${STATE_FILE}"
 }
 
 state_get() {
-    local key="${1}";
-    local default="${2:-}";
-
-    printf '%s\n' "${!key:-${default}}";
+    local key="${1}"
+    local default="${2:-}"
+    printf '%s\n' "${!key:-${default}}"
 }
 
 state_set() {
-    ensure_state_dirs;
-
-    local key="${1}";
-    local value="${2}";
-
-    export "${key}=${value}";
-
-    touch "${STATE_FILE}";
-
-    if grep -qE "^${key}=" "${STATE_FILE}"; then
-        sed -i \
-            "s|^${key}=.*|${key}=\"${value}\"|" \
-            "${STATE_FILE}";
+    ensure_state_dirs
+    local key="${1}"
+    local value="${2}"
+    export "${key}=${value}"
+    local tmpfile="${STATE_FILE}.tmp.$$"
+    if [[ -f "${STATE_FILE}" ]]; then
+        while IFS= read -r line; do
+            if [[ "${line}" =~ ^${key}= ]]; then
+                printf '%s=%q\n' "${key}" "${value}" >> "${tmpfile}"
+            else
+                printf '%s\n' "${line}" >> "${tmpfile}"
+            fi
+        done < "${STATE_FILE}"
     else
-        printf '%s="%s"\n' \
-            "${key}" \
-            "${value}" \
-            >> "${STATE_FILE}";
+        : > "${tmpfile}"
     fi
+    if ! grep -qE "^${key}=" "${STATE_FILE}" 2>/dev/null; then
+        printf '%s=%q\n' "${key}" "${value}" >> "${tmpfile}"
+    fi
+    mv "${tmpfile}" "${STATE_FILE}"
 }
 
 stage_mark_done() {

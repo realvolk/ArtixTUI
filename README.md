@@ -1,426 +1,206 @@
-# ArtixTUI - Artix Linux TUI Installer
+<p align="center">
+  <img src="https://github.com/realvolk/ArtixTUI/blob/main/.github/artix-logo.png" width="196" alt="Artix Linux">
+</p>
 
-Modular TUI installer for Artix Linux.  
+<h1 align="center">ArtixTUI</h1>
 
-Designed for users who want a configurable Artix setup without manually performing every installation step.
+<p align="center">
+  <strong>A beautiful, modular, TUI-first installer for Artix Linux</strong><br>
+  No flags. No confusion. Just a gorgeous terminal interface.
+</p>
 
-#### Version: v6.4.1.0
-*(Rewrite / Major Release / New Feature / Major bug fix / Minor bug fix / Hot fix)*
+<p align="center">
+  <img src="https://img.shields.io/badge/Version-v7.0.0.0-blue?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/Language-Bash-4EAA25?style=flat-square&logo=gnu-bash" alt="Bash">
+  <img src="https://img.shields.io/badge/TUI-gum-FFB6C1?style=flat-square" alt="gum">
+  <img src="https://img.shields.io/badge/License-MIT-yellow?style=flat-square" alt="License">
+</p>
 
 ---
 
-# Overview
+# What is ArtixTUI?
 
-ArtixTUI automates the installation process while keeping the process **modular, transparent, and user-controlled**.  
+ArtixTUI is a **TUI-first, modular installer** for Artix Linux (OpenRC, runit, dinit, s6).
 
-The installer follows a **modular shell-based structure** with separate stages and post-install components instead of one monolithic script. Almost everything is selectable during installation.  
+It walks you through partitioning, filesystem creation, base system installation, bootloader setup, desktop environment, drivers, and extra tools, all from a single, beautiful terminal interface.
 
-It can **automatically self-update** when a newer upstream version is detected.
+Built with **gum** by Charmbracelet, it looks better than `archinstall` and works with **any** Artix init system.
+
+---
+
+# Quick Start
+
+```bash
+git clone https://github.com/realvolk/ArtixTUI.git
+cd ArtixTUI
+chmod +x install
+sudo ./install
+```
+
+That's it.
+
+No `--auto`, no `--manual`, no confusing flags.
+
+You'll be greeted by a main menu where you choose your installation mode.
+
+---
+
+# 🧭 Installation Modes
+
+| Mode | Description |
+|------|-------------|
+| 🟢 Automatic | The installer guides you through every configuration choice. |
+| 🔵 Manual | You select a disk; the installer detects what's already done and resumes. |
+| 🟡 Resume | Continue an interrupted installation from the last saved stage. |
+| 🟠 Recovery | Scan `/mnt` for an existing system, reconstruct state, and repair. |
+| 🔴 Power User | Compile everything from source, Gentoo-style (`CFLAGS`, `MAKEOPTS`, etc.) — coming in v7.1 |
+
+A debug toggle is available for every mode from the same menu.
 
 ---
 
 # Features
 
-## Init Systems
-Supports all official Artix init systems:
+- Gorgeous TUI — built on gum *(no more dialog!)*
+- Modular architecture — separate scripts for storage, install, post, stages
+- Universal logger — every message is written to:
+  - `/tmp/artix-installer/install.log`
+  - `/mnt/var/log/artix-installer.log`
+- Safe passwords — hashed with `openssl passwd -6`, never written to disk
+- Full-disk encryption — LUKS support with passphrase confirmation
+- EFIStub, GRUB, rEFInd — all bootloaders supported
+- Multiple kernels:
+  - `linux`
+  - `zen`
+  - `lts`
+  - `hardened`
+  - `libre`
+  - `cachyos`
+  - `bazzite`
+  - `xanmod`
+  - `tkg`
+- Multiple filesystems:
+  - `ext4`
+  - `btrfs`
+  - `xfs`
+  - `f2fs`
+  - `bcachefs`
+  - `exfat`
+  - `zfs`
+- Desktop environments:
+  - XFCE
+  - LXQt
+  - KDE Plasma
+  - LXDE
+  - Hyprland
+  - MangoWM
+  - Niri
+  - Sway
+  - i3
+  - dwm
+  - IceWM
+- GPU detection:
+  - NVIDIA (`open-dkms` or proprietary)
+  - Intel
+  - AMD
+  - VESA fallback
+  - VM guest drivers
+- Extras:
+  - flatpak
+  - ufw
+  - bluez
+  - zram
+  - fzf
+  - zoxide
+  - starship
+  - eza
+  - btop
+  - tmux
+  - rsvc
+  - more
+- Offline mode — install from cached packages when network is unavailable
+- State persistence — all configuration saved to `/tmp/artix-installer/state.conf` for resume/recovery
 
-- OpenRC
-- runit
-- s6
-- dinit
+---
 
-## Display Stack
-Selectable display server stack:
+# Dependencies
 
-- X.Org
-- xLibre
+ArtixTUI requires `gum` for its TUI.
 
-Wayland compositors automatically install XWayland support where needed.
+If it is not already installed, the installer will build it from source during the preflight stage (requires `go`, which will also be installed automatically).
 
-## Desktop Environments / Window Managers
-Currently supported:
+Everything else is handled by the installer itself.
 
-- XFCE4
-- LXQt
-- KDE
-- LXDE
-- Hyprland
-- Niri
-- Sway
-- i3wm
-- dwm
-- IceWM
+---
 
-Minimal installs are also supported.
+# Project Structure
 
-## Kernel Selection
-Available kernel choices:
+```text
+ArtixTUI/
+├── install                     # entry point
+├── VERSION                     # version file for auto-update
+├── scripts/
+│   ├── common.sh               # logging, helpers, requirements
+│   ├── state.sh                # configuration state read/write
+│   ├── recovery.sh             # existing-system detection
+│   ├── kernels.sh              # kernel package detection
+│   ├── tui/
+│   │   ├── core.sh             # gum wrappers (all UI primitives)
+│   │   ├── menus.sh            # configuration selection functions
+│   │   └── summary.sh          # installation summary screen
+│   ├── storage/
+│   │   ├── partition.sh        # GPT partitioning
+│   │   ├── filesystem.sh       # filesystem creation
+│   │   └── mount.sh            # filesystem mounting
+│   ├── install/
+│   │   ├── basestrap.sh        # base system installation
+│   │   ├── bootloader.sh       # GRUB / rEFInd / EFIStub setup
+│   │   ├── handoff.sh          # configuration export to target
+│   │   ├── services.sh         # service management wrappers
+│   │   ├── system.sh           # hostname, locale, timezone
+│   │   └── users.sh            # user creation and passwords
+│   ├── post/
+│   │   ├── networking.sh       # network stack configuration
+│   │   ├── drivers.sh          # GPU, VM, and kernel drivers
+│   │   ├── desktop.sh          # desktop environment installation
+│   │   ├── audio.sh            # PipeWire / PulseAudio setup
+│   │   └── extras.sh           # optional packages
+│   └── stages/
+│       ├── preflight.sh        # environment preparation
+│       ├── storage.sh          # storage orchestration
+│       ├── base.sh             # base installation stage
+│       ├── chroot.sh           # chroot configuration stage
+│       ├── post.sh             # post-install stage
+│       └── finalize.sh         # cleanup and finalisation
+```
 
-- Linux
-- Linux LTS
-- Linux Hardened
-- Linux Libre
-- CachyOS
-- XanMod
-- TKG Kernel
-- Bazzite Kernel
+---
 
-## Filesystem Support
+# Supported Configurations
 
-### Supported Filesystems
-- EXT4
-- BTRFS
-- XFS
-- F2FS
-- Bcachefs
-- exFAT
-- ZFS (experimental)
-
-### BTRFS Layouts
-ArtixTUI supports multiple BTRFS subvolume layouts:
-
-| Layout | Description |
+| Category | Options |
 |---|---|
-| `standard` | Creates `@`, `@home`, `@log`, `@pkg`, and `@snapshots` subvolumes |
-| `flat` | Creates a minimal flat subvolume layout |
-| `snapshot` | Snapshot-oriented layout for rollback-focused setups |
-
-### EFIStub Support
-EFIStub booting is fully supported.
-
-When EFIStub is selected:
-- Kernel and initramfs are copied into `EFI/Artix`
-- Microcode images are automatically detected and included
-- EFI boot entries are created using `efibootmgr`
-- `/boot` is mounted directly as the EFI partition
-
-### Experimental Features
-The following features are considered experimental:
-- ZFS root installations
-- Bcachefs root installations
-- TKG kernel support
-- MangoWM automated build/install flow
-
-### Notes
-- ZFS requires a ZFS-capable live ISO/kernel
-- linux-libre may disable Wi-Fi, Bluetooth, NVIDIA, and other proprietary hardware support
-- Some custom kernels require third-party repositories
-- Chaotic-AUR and CachyOS repositories are configured automatically when required
-
-## GPU Driver Detection
-Automatic GPU and virtualization detection.
-
-Supports:
-
-- Intel
-- AMD
-- NVIDIA
-- VMware
-- VirtualBox
-- QEMU/KVM
-
-Includes support for:
-
-- NVIDIA Open Kernel Modules
-- Nouveau fallback
-- xLibre driver stack
-
-## Networking
-Selectable network stack:
-
-- NetworkManager
-- dhcpcd + iwd
-- ConnMan
-- Manual setup
-
-## Audio
-Selectable audio stack:
-
-- PipeWire
-- PulseAudio
-- No audio stack
-
-## Security
-Optional:
-
-- LUKS full disk encryption
-
-## Bootloaders
-Supported bootloaders:
-
-- GRUB
-- rEFInd
-- EFIStub (automatic efibootmgr entry creation)
-
-## Shell Selection
-Selectable user shell:
-
-- Bash
-- Zsh
-- Fish
-
-## Extra Tools
-Optional extras menu includes:
-
-- Git + base-devel
-- Flatpak
-- Fastfetch
-- UFW
-- Bluetooth support
-- ZRAM
-- fzf
-- zoxide
-- starship
-- eza
-- btop
-- htop
-- nvtop
-- tmux
-- usb_modeswitch
-- rsvc (runit helper)
+| Init system | OpenRC, runit, dinit, s6 |
+| Filesystem | ext4, btrfs, xfs, f2fs, bcachefs, exfat, zfs |
+| Bootloader | GRUB, rEFInd, EFIStub |
+| Kernel | linux, zen, lts, hardened, libre, cachyos-bore, bazzite, xanmod, tkg |
+| Desktop | XFCE, LXQt, KDE Plasma, LXDE, Hyprland, MangoWM, Niri, Sway, i3, dwm, IceWM, none |
+| Network | NetworkManager, dhcpcd+iwd, ConnMan, none |
+| Audio | PipeWire, PulseAudio, none |
+| Shell | bash, zsh, fish |
+| Display stack | X.Org, xLibre |
+| Encryption | LUKS full-disk encryption |
 
 ---
 
-# Requirements
+# Contributing
 
-- Artix Linux live environment
-- Internet connection
-- UEFI boot mode
-- Git
+Bug reports and pull requests are welcome.
 
-Some advanced filesystem or kernel combinations may require temporary
-package installation inside the live environment. ArtixTUI attempts to handle this automatically.
+Please test your changes on a live Artix ISO before submitting.
 
 ---
 
-# Installation
+# License
 
-```bash
-git clone https://github.com/realvolk/ArtixTUI
-cd ArtixTUI
-
-chmod +x install
-
-sudo ./install
-```
-
-The installer can automatically self-update when a newer upstream version is detected.
-
----
-
-# Technics
-
-## Installer Flags
-
-- `-a, --auto` — TUI-driven automated Artix installation  
-- `-m, --manual` — Manual installation mode  
-- `-r, --resume` — Resume interrupted installation  
-- `-rr, --recovery` — Recover partially completed installation  
-- `-d, --debug` — Enable shell tracing (can be used with any mode)  
-- `-h, --help` — Show this help message  
-
-> **Note:** If the installer was interrupted (e.g., via CTRL+C), `-a` may act like `-r` and resume where it left off. Flags cannot be combined; only one mode flag should be used at a time.
-
-## What the Installer Does
-
-- Verifies required environment
-- Handles disk partitioning and formatting
-- Configures init system
-- Installs selected kernel
-- Installs base system
-- Configures networking
-- Installs bootloader
-- Automatically creates EFI boot entries
-- Generates fstab
-- Configures users
-- Installs drivers
-- Installs desktop environment/window manager
-- Enables required services
-- Applies post-install configuration
-- Supports installer recovery/resume
-- Self-updates outdated installer versions
-
-## Script Structure
-
-| File | Purpose |
-|---|---|
-| `install` | Main installer entry point |
-| `scripts/common.sh` | Basic operations |
-| `scripts/state.sh` | Installer state management |
-| `scripts/recovery.sh` | Recovery options manager |
-| `scripts/tui/` | TUI framework and menus |
-| `scripts/stages/` | Installation stages |
-| `scripts/install/` | Base installation logic |
-| `scripts/post/` | Post-install modules |
-
-### Modular Post-Install Components
-
-Separated into individual modules:
-
-- drivers
-- audio
-- desktop
-- networking
-- extras
-
----
-
-# Recovery
-
-If installation is interrupted:
-
-```bash
-sudo ./install -r
-```
-
-To attempt recovery of a partially completed installation:
-
-```bash
-sudo ./install -rr
-```
-
-Recovery mode attempts to detect existing mounted installations in `/mnt` and continue from the appropriate stage.
-
----
-
-# Maintenance
-
-Actively maintained and tested as features are added. Bug reports and feedback are welcome via GitHub issues or Discord (**volk.v**).
-
-*Just because something is added does NOT mean it is immediately tested.*
-
----
-
-# Known Caveats
-
-- Some custom kernels may require additional repositories.
-- ZFS support depends on matching kernel headers.
-- EFIStub installations require proper UEFI firmware support.
-- DKMS-based kernel/module combinations may increase installation time.
-- Some filesystem combinations may require additional live-environment tooling.
-- Certain combinations WILL break the script. Please report bugs for fixes.
-- Certain things are known to break while attempting an install: ZFS, Bazzite, Xanmod, MangoWM, etc.
-
----
-
-# Self-Updater Notice
-
-The installer replaces outdated files during self-update.  
-Do not keep custom modifications inside the installer directory unless version controlled.
-
----
-
-# Troubleshooting ("Oh no's")
-
-### The script won't launch?
-```bash
-chmod +x install
-```
-
-### Terminal acts weird after script exit?
-```bash
-TERM=xterm-256color
-reset
-```
-Or switch to another TTY (e.g., CTRL+ALT+F2).
-
-### Internet went out mid-install
-Wait for network recovery, then:
-```bash
-sudo ./install -r
-```
-
-### Debugging hangs / weird behavior?
-```bash
-sudo ./install -r -d
-```
-Inspect logs in `/root/ArtixTUI/`:
-- `basestrap-debug.log`  
-- `drivers-debug.log`  
-- `post-stage.log`  
-
-This runs the installer in debug mode using the `-d` (or `--debug`) flag.
-
-If the issue still is not obvious, note the installation STAGE where the installer stopped.
-
-##### Example: `drivers.sh` gets stuck on `[*] Installing drivers...`
-
-```bash
-cd ArtixTUI/scripts/post/
-nano drivers.sh
-```
-
-Inside `drivers.sh`:
-
-```bash
-set -Eeuo pipefail;
-```
-
-Should temporarily become:
-
-```bash
-set -Eeuxo pipefail;
-```
-
-Save:
-- CTRL+O
-- Enter
-- CTRL+X
-
-Then run the installer again with:
-
-```bash
-sudo ./install -r
-```
-
-You can inspect logs with:
-
-```bash
-cat filename.log
-```
-
----
-
-### System failed to boot after installation
-
-Boot failures are usually related to:
-
-- incorrect EFI setup
-- unsupported kernel/repository combinations
-- failed driver installation
-- incomplete bootloader configuration
-
-Try:
-
-```bash
-sudo ./install -rr -d
-```
-
-Then inspect:
-
-```bash
-/root/ArtixTUI/
-```
-
-for generated logs.
-
-Inside scripts, you can temporarily add `-x` to see shell traces.
-
----
-
-# QnA
-
-**Q:** Why only 3 debug logs?  
-**A:** Key stages are logged; more may be added over time.
-
-**Q:** Why manually enable `-x` in scripts?  
-**A:** To pinpoint exact failures for easier debugging and reporting.
-
-**Q:** Where can I suggest features?  
-**A:** GitHub issues, Discord, or smoke signals if you perfer.
-
----
-
-# Credits
-
-Original project by [realvolk](https://github.com/realvolk)
+MIT © [realvolk](https://github.com/realvolk) 2026.

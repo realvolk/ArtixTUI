@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
-set -Eeuo pipefail;
+set -Eeuo pipefail
 
-[[ -f /etc/artix-installer.conf ]] \
-    && source /etc/artix-installer.conf
-
+[[ -f /etc/artix-installer.conf ]] && source /etc/artix-installer.conf
 if [[ -f ./scripts/install/services.sh ]]; then
     source ./scripts/install/services.sh
 elif [[ -f /usr/local/lib/artix-installer/services.sh ]]; then
@@ -11,354 +9,141 @@ elif [[ -f /usr/local/lib/artix-installer/services.sh ]]; then
 fi
 
 get_gpu_vendor() {
-    local gpu_vendor;
-
-    gpu_vendor=$(
-        lspci -nn 2>/dev/null \
-            | awk -F' ' '/VGA|3D/ {print tolower($0)}' \
-            | grep -oE 'nvidia|intel|amd' \
-            | head -n1 \
-            || true
-    );
-
-    printf '%s\n' "${gpu_vendor}";
+    lspci -nn 2>/dev/null | awk -F' ' '/VGA|3D/ {print tolower($0)}' | grep -oE 'nvidia|intel|amd' | head -n1 || true
 }
 
 get_gpu_info() {
-    lspci -nn 2>/dev/null \
-        | awk -F': ' '/VGA|3D/ {print $3}' \
-        | xargs \
-        || true;
+    lspci -nn 2>/dev/null | awk -F': ' '/VGA|3D/ {print $3}' | xargs || true
 }
 
 get_pci_id() {
-    lspci -n 2>/dev/null \
-        | awk '/0300|0302/ {print $3}' \
-        | awk -F':' '{print $2}' \
-        | head -n1 \
-        || true;
+    lspci -n 2>/dev/null | awk '/0300|0302/ {print $3}' | awk -F':' '{print $2}' | head -n1 || true
 }
 
 detect_vm() {
-    local vm="none";
-
-    if grep -qaE \
-        'virt|vmware|kvm|qemu|oracle|virtualbox' \
-        /sys/class/dmi/id/product_name \
-        /sys/class/dmi/id/sys_vendor \
-        2>/dev/null; then
-
-        vm=$(
-            grep -h -oE \
-                'vmware|qemu|kvm|oracle|virtualbox' \
-                /sys/class/dmi/id/product_name \
-                /sys/class/dmi/id/sys_vendor \
-                2>/dev/null \
-                | head -n1
-        );
-
-        [[ -z "${vm}" ]] && vm="kvm";
-    fi;
-
-    printf '%s\n' "${vm}";
+    local vm
+    vm=$(grep -h -oE 'vmware|qemu|kvm|oracle|virtualbox' /sys/class/dmi/id/product_name /sys/class/dmi/id/sys_vendor 2>/dev/null | head -n1)
+    [[ -n "${vm}" ]] && printf '%s\n' "${vm}" || printf 'none\n'
 }
 
-export -f \
-    get_gpu_vendor \
-    get_gpu_info \
-    get_pci_id \
-    detect_vm
+export -f get_gpu_vendor get_gpu_info get_pci_id detect_vm
 
 install_drivers() {
-    local pkgs=();
-    local gpu_vendor;
-    local gpu_info;
-    local pci_id;
-    local vm_type;
-    local x_stack;
-    local wm_de;
-    local kernel_choice;
-    local rc=0;
-    local initramfs_tool='mkinitcpio';
-
-    gpu_vendor="$(get_gpu_vendor)";
-    gpu_info="$(get_gpu_info)";
-    pci_id="$(get_pci_id)";
-    vm_type="$(detect_vm)";
-    x_stack="$(state_get X_STACK xorg)";
-    wm_de="$(state_get WM_DE none)";
-    kernel_choice="$(state_get KERNEL_CHOICE linux)";
+    local pkgs=() rc=0 initramfs_tool='mkinitcpio'
+    local gpu_vendor gpu_info pci_id vm_type x_stack wm_de kernel_choice
+    gpu_vendor=$(get_gpu_vendor)
+    gpu_info=$(get_gpu_info)
+    pci_id=$(get_pci_id)
+    vm_type=$(detect_vm)
+    x_stack="$(state_get X_STACK xorg)"
+    wm_de="$(state_get WM_DE none)"
+    kernel_choice="$(state_get KERNEL_CHOICE linux)"
 
     mkdir -p /root/ArtixTUI
-
     : > /root/ArtixTUI/drivers-debug.log
 
     case "${kernel_choice}" in
-        linux)
-            pkgs+=(linux-headers)
-            ;;
-
-        linux-lts)
-            pkgs+=(linux-lts-headers)
-            ;;
-
-        linux-hardened)
-            pkgs+=(linux-hardened-headers)
-            ;;
-
-        linux-zen)
-            pkgs+=(linux-zen-headers)
-            ;;
-
+        linux)                   pkgs+=(linux-headers) ;;
+        linux-lts)               pkgs+=(linux-lts-headers) ;;
+        linux-hardened)          pkgs+=(linux-hardened-headers) ;;
+        linux-zen)               pkgs+=(linux-zen-headers) ;;
         linux-cachy|linux-cachyos)
-            if pacman -Si linux-cachyos-headers \
-                >/dev/null 2>&1; then
-
-                pkgs+=(linux-cachyos-headers)
-            elif pacman -Si linux-cachy-headers \
-                >/dev/null 2>&1; then
-
-                pkgs+=(linux-cachy-headers)
-            fi
-            ;;
-
-        linux-bazzite-bin|bazzite)
-            initramfs_tool='dracut'
-            ;;
-
+            pacman -Si linux-cachyos-headers >/dev/null 2>&1 && pkgs+=(linux-cachyos-headers) \
+                || pacman -Si linux-cachy-headers >/dev/null 2>&1 && pkgs+=(linux-cachy-headers) ;;
+        linux-bazzite-bin|bazzite) initramfs_tool='dracut' ;;
         xanmod)
-            local cpu_level;
-            local kernel_headers;
-
-            cpu_level=$(
-                /lib/ld-linux-x86-64.so.2 --help \
-                    | grep -E 'x86-64-v[2-4] \(supported' \
-                    | head -n1 \
-                    | awk '{print $1}'
-            );
-
+            local cpu_level kernel_headers
+            cpu_level=$(/lib/ld-linux-x86-64.so.2 --help 2>/dev/null | grep -oE 'x86-64-v[2-4]' | head -n1)
             case "${cpu_level}" in
-                x86-64-v4)
-                    kernel_headers='linux-xanmod-x64v4-headers'
-                    ;;
-
-                x86-64-v3)
-                    kernel_headers='linux-xanmod-x64v3-headers'
-                    ;;
-
-                x86-64-v2)
-                    kernel_headers='linux-xanmod-x64v2-headers'
-                    ;;
-
-                *)
-                    kernel_headers='linux-xanmod-headers'
-                    ;;
+                x86-64-v4) kernel_headers='linux-xanmod-x64v4-headers' ;;
+                x86-64-v3) kernel_headers='linux-xanmod-x64v3-headers' ;;
+                x86-64-v2) kernel_headers='linux-xanmod-x64v2-headers' ;;
+                *)         kernel_headers='linux-xanmod-headers' ;;
             esac
-
-            pkgs+=("${kernel_headers}")
-            ;;
-
-        tkg)
-            ;;
+            pkgs+=("${kernel_headers}") ;;
+        tkg) ;;
     esac
 
     {
-        printf '[*] GPU detected: %s\n' "${gpu_info:-Unknown}"
-        printf '[*] Virtualization detected: %s\n' "${vm_type}"
-        printf '[*] Selected display stack: %s\n' "${x_stack}"
-        printf '[*] Selected kernel: %s\n\n' "${kernel_choice}"
+        log_info "GPU detected: ${gpu_info:-Unknown}"
+        log_info "Virtualization: ${vm_type}"
+        log_info "Display stack: ${x_stack}"
+        log_info "Kernel: ${kernel_choice}"
 
         if [[ "${vm_type}" != 'none' ]]; then
-            printf '[*] Virtual machine detected. Installing guest drivers...\n\n'
-
+            log_info "VM detected. Installing guest drivers..."
             case "${vm_type}" in
                 kvm|qemu)
-                    pkgs+=(
-                        spice-vdagent
-                        qemu-guest-agent
-                    )
-
-                    if [[ "${x_stack}" != 'xlibre' ]]; then
-                        pkgs+=(xf86-video-qxl)
-                    fi
-                    ;;
-
+                    pkgs+=(spice-vdagent qemu-guest-agent)
+                    [[ "${x_stack}" != 'xlibre' ]] && pkgs+=(xf86-video-qxl) ;;
                 vmware)
                     pkgs+=(open-vm-tools)
-
-                    if [[ "${x_stack}" != 'xlibre' ]]; then
-                        pkgs+=(xf86-video-vmware)
-                    fi
-                    ;;
-
+                    [[ "${x_stack}" != 'xlibre' ]] && pkgs+=(xf86-video-vmware) ;;
                 oracle|virtualbox)
-                    pkgs+=(
-                        virtualbox-guest-utils
-                    )
-                    ;;
+                    pkgs+=(virtualbox-guest-utils) ;;
             esac
         fi
 
         if [[ "${gpu_vendor}" == 'nvidia' && -n "${pci_id}" ]]; then
-            local pci_hex
-
-            pci_hex=$((16#${pci_id}))
-
-            if (( pci_hex >= 16#1e00 )); then
-                printf '[*] Newer NVIDIA GPU detected. Using nvidia-open-dkms...\n\n'
-
-                pkgs+=(
-                    nvidia-open-dkms
-                    nvidia-utils
-                    mesa
-                )
+            if (( 16#${pci_id} >= 16#1e00 )); then
+                log_info "Newer NVIDIA → nvidia-open-dkms"
+                pkgs+=(nvidia-open-dkms nvidia-utils mesa)
             else
-                printf '[*] Older NVIDIA GPU detected. Using proprietary NVIDIA stack...\n\n'
-
-                pkgs+=(
-                    nvidia-dkms
-                    nvidia-utils
-                    nvidia-settings
-                    mesa
-                )
+                log_info "Older NVIDIA → proprietary"
+                pkgs+=(nvidia-dkms nvidia-utils nvidia-settings mesa)
             fi
-
         elif [[ "${gpu_vendor}" == 'intel' ]]; then
-            printf '[*] Intel GPU detected. Installing Intel graphics stack...\n\n'
-
+            log_info "Intel GPU detected."
             if [[ "${x_stack}" == 'xlibre' ]]; then
-                pkgs+=(
-                    xlibre-video-intel
-                    mesa
-                    vulkan-intel
-                )
+                pkgs+=(xlibre-video-intel mesa vulkan-intel)
             else
-                pkgs+=(
-                    xf86-video-intel
-                    intel-media-driver
-                    mesa
-                    vulkan-intel
-                )
+                pkgs+=(xf86-video-intel intel-media-driver mesa vulkan-intel)
             fi
-
         elif [[ "${gpu_vendor}" == 'amd' ]]; then
-            printf '[*] AMD GPU detected. Installing AMD graphics stack...\n\n'
-
+            log_info "AMD GPU detected."
             if [[ "${x_stack}" == 'xlibre' ]]; then
-                pkgs+=(
-                    xlibre-video-amdgpu
-                    mesa
-                    vulkan-radeon
-                )
+                pkgs+=(xlibre-video-amdgpu mesa vulkan-radeon)
             else
-                pkgs+=(
-                    xf86-video-amdgpu
-                    mesa
-                    vulkan-radeon
-                )
+                pkgs+=(xf86-video-amdgpu mesa vulkan-radeon)
             fi
-
         else
-            printf '[*] Unknown GPU detected. Falling back to VESA...\n\n'
-
-            if [[ "${x_stack}" == 'xlibre' ]]; then
-                pkgs+=(
-                    mesa
-                )
-            else
-                pkgs+=(
-                    mesa
-                    xf86-video-vesa
-                )
-            fi
+            log_info "Unknown GPU → VESA fallback"
+            [[ "${x_stack}" == 'xlibre' ]] && pkgs+=(mesa) || pkgs+=(mesa xf86-video-vesa)
         fi
 
-        if [[ "${x_stack}" == 'xlibre' ]]; then
-            pkgs+=(xlibre-xserver)
-        else
-            pkgs+=(xorg-server)
-        fi
+        [[ "${x_stack}" == 'xlibre' ]] && pkgs+=(xlibre-xserver) || pkgs+=(xorg-server)
+        case "${wm_de}" in hyprland|niri|sway) pkgs+=(xorg-xwayland) ;; esac
 
-        case "${wm_de}" in
-            hyprland|niri|sway)
-                pkgs+=(xorg-xwayland)
-                ;;
-        esac
+        log_info "Installing: ${pkgs[*]}"
+        export COLUMNS=80 LINES=24 TERM=dumb
 
-        printf '[*] Selected packages:\n'
-        printf ' - %s\n' "${pkgs[@]}"
-
-        printf '\n[*] Starting package installation...\n\n'
-
-        export COLUMNS=80
-        export LINES=24
-        export TERM=dumb
-
-        if pacman \
-            --color=never \
-            --noconfirm \
-            --needed \
-            -S \
-            "${pkgs[@]}"; then
-
-            rc=0
-        else
-            rc=$?
-
-            printf '\n[!] Driver installation failed with exit code: %s\n' \
-                "${rc}"
+        if pacman --color=never --noconfirm --needed -S "${pkgs[@]}"; then rc=0
+        else rc=$?; log_error "Driver installation failed (rc=${rc})"
         fi
 
         if [[ ${rc} -eq 0 && "${gpu_vendor}" == 'nvidia' ]]; then
-            printf '\n[*] Regenerating initramfs after NVIDIA installation...\n\n'
-
-            if [[ "${initramfs_tool}" == 'dracut' ]]; then
-                dracut --regenerate-all --force || rc=$?
-            else
-                mkinitcpio -P || rc=$?
-            fi
+            log_info "Regenerating initramfs after NVIDIA..."
+            if [[ "${initramfs_tool}" == 'dracut' ]]; then dracut --regenerate-all --force || rc=$?
+            else mkinitcpio -P || rc=$?; fi
         fi
 
-        if [[ "${vm_type}" == 'kvm' || "${vm_type}" == 'qemu' ]]; then
-            enable_service qemu-guest-agent
-        fi
+        [[ "${vm_type}" == 'kvm' || "${vm_type}" == 'qemu' ]] && enable_service qemu-guest-agent
 
-        printf '\n[*] Driver installation complete.\n'
-
+        log_info "Driver installation complete."
     } >> /root/ArtixTUI/drivers-debug.log 2>&1
 
-    if [[ ${rc} -ne 0 ]]; then
-        if [[ "${gpu_vendor}" == 'nvidia' ]]; then
-            {
-                printf '[!] NVIDIA driver install failed.\n'
-                printf '[*] Attempting nouveau fallback...\n\n'
-
-                export COLUMNS=80
-                export LINES=24
-                export TERM=dumb
-
-                if [[ "${x_stack}" == 'xlibre' ]]; then
-                    pacman \
-                        --color=never \
-                        --noconfirm \
-                        --needed \
-                        -S \
-                        xlibre-video-nouveau \
-                        mesa
-                else
-                    pacman \
-                        --color=never \
-                        --noconfirm \
-                        --needed \
-                        -S \
-                        xf86-video-nouveau \
-                        mesa
-                fi
-
-                rc=$?
-            } >> /root/ArtixTUI/drivers-debug.log 2>&1
-        fi
-
-        return "${rc}"
+    if [[ ${rc} -ne 0 && "${gpu_vendor}" == 'nvidia' ]]; then
+        log_error "NVIDIA failed. Trying nouveau fallback..."
+        {
+            export COLUMNS=80 LINES=24 TERM=dumb
+            if [[ "${x_stack}" == 'xlibre' ]]; then
+                pacman --color=never --noconfirm --needed -S xlibre-video-nouveau mesa
+            else
+                pacman --color=never --noconfirm --needed -S xf86-video-nouveau mesa
+            fi
+            rc=$?
+        } >> /root/ArtixTUI/drivers-debug.log 2>&1
     fi
+
+    return "${rc}"
 }

@@ -1,47 +1,14 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
 setup_audio() {
-    local audio_stack;
-    local pkgs=();
-
-    audio_stack="${AUDIO_STACK:-pipewire}";
-
+    local audio_stack="${AUDIO_STACK:-pipewire}" pkgs=()
     case "${audio_stack}" in
         pipewire)
-            pkgs+=(
-                pipewire
-                pipewire-pulse
-                pipewire-alsa
-                pipewire-jack
-                wireplumber
-
-                alsa-utils
-                pavucontrol
-                rtkit
-            )
-            ;;
-
+            pkgs+=(pipewire pipewire-pulse pipewire-alsa pipewire-jack wireplumber alsa-utils pavucontrol rtkit) ;;
         pulseaudio)
-            pkgs+=(
-                pulseaudio
-                pulseaudio-alsa
-
-                alsa-utils
-                pavucontrol
-            )
-            ;;
-
-        none)
-            return 0
-            ;;
+            pkgs+=(pulseaudio pulseaudio-alsa alsa-utils pavucontrol) ;;
+        none) return 0 ;;
     esac
-
-    printf '[*] Installing audio packages...\n';
-
-    if ! pacman -S \
-        --noconfirm \
-        --needed \
-        "${pkgs[@]}"; then
-
-        printf '[*] Failed to install audio packages.\n' >&2;
-        return 1;
-    fi
+    log_info "Installing audio packages..."
+    pacman -S --noconfirm --needed "${pkgs[@]}" || { log_warn "Failed to install audio packages."; return 1; }
 }
