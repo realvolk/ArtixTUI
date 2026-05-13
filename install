@@ -192,6 +192,18 @@ main() {
     require_root
     require_efi
 
+    if ! command -v gum &>/dev/null; then
+        if [[ -f "${BASE_DIR}/bin/gum" ]]; then
+            install -Dm755 "${BASE_DIR}/bin/gum" /usr/local/bin/gum
+        else
+            printf '[*] Gum not found. Installing...\n'
+            pacman -Sy --noconfirm gum 2>/dev/null || {
+                printf '[!] Failed to install gum. Install it manually and retry.\n' >&2
+                exit 1
+            }
+        fi
+    fi
+
     main_menu
 
     if [[ "${DEBUG}" == 'true' ]]; then
