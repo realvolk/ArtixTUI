@@ -151,7 +151,7 @@ tui_select_arch_repos() {
         state_set ENABLE_ARCH_REPOS "yes"
         return 0
     fi
-    
+
     if tui_yesno "Arch Repositories" "Enable official Arch repositories?"; then
         state_set ENABLE_ARCH_REPOS "yes"
     else
@@ -198,7 +198,8 @@ tui_select_hostname() {
             state_set HOSTNAME "${h}"
             return 0
         fi
-        tui_msg_quick "Invalid Hostname" "Allowed: a-z, A-Z, 0-9, dash. Start with letter/digit."    done
+        tui_msg_quick "Invalid Hostname" "Allowed: a-z, A-Z, 0-9, dash. Start with letter/digit."
+    done
 }
 
 tui_select_timezone() {
