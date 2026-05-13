@@ -47,7 +47,7 @@ tui_input() {
     local title="${1}" msg="${2}" default="${3:-}" result
     gum style --bold --foreground 212 "── ${title} ──"
     [[ -n "${msg}" ]] && gum format "${msg}"
-    result=$(gum input --placeholder "${default}" --prompt "> " </dev/tty) || true
+    result=$(gum input --value "${default}" --prompt "> " </dev/tty) || true
     printf '%s' "${result}"
 }
 
