@@ -207,7 +207,8 @@ tui_select_timezone() {
     while true; do
         tz=$(tui_input "Timezone" "Enter timezone (Region/City):" "Europe/Belgrade") || return 1
         if [[ -f "/usr/share/zoneinfo/${tz}" ]]; then break; fi
-        tui_msg_quick "Invalid Timezone" "Timezone not found. Example: Europe/London"    done
+        tui_msg_quick "Invalid Timezone" "Timezone not found. Example: Europe/London"
+    done
     state_set TIMEZONE "${tz}"
 }
 
