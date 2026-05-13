@@ -72,7 +72,15 @@ stage_preflight() {
                 || pkgs+=(bcachefs-tools);
             ;;
         zfs)
-            if ! command_exists zpool || ! modprobe zfs 2>/dev/null; then
+            if ! command_exists zpool || ! modprobe zfs 2>/dev/null; then                if ! grep -q '^\[archzfs\]' /etc/pacman.conf; then
+                    cat <<'EOF' >> /etc/pacman.conf
+
+[archzfs]
+Server = https://archzfs.com/$repo/x86_64
+EOF
+                    pacman -Sy --noconfirm
+                fi
+
                 pkgs+=(zfs-utils dkms zfs-dkms)
                 local kver hdr_pkg
                 kver=$(uname -r)
@@ -110,15 +118,20 @@ stage_preflight() {
     
     if [[ "${fs_type}" == 'zfs' ]]; then
         if ! modprobe zfs 2>/dev/null; then
+            log_info "Building ZFS module for kernel ${kver}..."
             dkms autoinstall 2>/dev/null || true
+            sleep 2
             modprobe zfs 2>/dev/null || {
-                log_error "ZFS kernel module still unavailable."
-                log_error "Your kernel ($(uname -r)) may be incompatible with the installed zfs-dkms."
-                log_error "Try using a standard Artix kernel (linux) for ZFS support."
+                log_error "ZFS kernel module still unavailable after DKMS build."
+                log_error "Your kernel ($(uname -r)) may be too new for the available zfs-dkms."
+                log_error "Options:"
+                log_error "  1. Use a different filesystem (ext4, btrfs, xfs)"
+                log_error "  2. Use the 'linux' or 'linux-lts' kernel on the live ISO"
+                log_error "  3. Wait for upstream ZFS to support kernel ${kver}"
                 return 1
             }
         fi
-        log_info "ZFS kernel module loaded."
+        log_info "ZFS kernel module loaded successfully."
     fi
 
     stage_mark_done preflight;
