@@ -61,32 +61,30 @@ EOF
                 fi
 
                 pkgs+=(zfs-utils dkms zfs-dkms)
-                local kver running_kernel_pkg headers_pkg
-                kver=$(uname -r)
 
-                running_kernel_pkg=$(pacman -Qqo /lib/modules 2>/dev/null || true)
-                if [[ -z "${running_kernel_pkg}" ]]; then
+                local kver kernel_pkg headers_pkg
+                kver=$(uname -r)
+                kernel_pkg=$(pacman -Qqo "/lib/modules/${kver}" 2>/dev/null | grep -v -- '-headers' | head -n1)
+
+                if [[ -z "${kernel_pkg}" ]]; then
                     for candidate in linux linux-lts linux-zen linux-hardened; do
                         if pacman -Qq "${candidate}" &>/dev/null; then
-                            running_kernel_pkg="${candidate}"
+                            kernel_pkg="${candidate}"
                             break
                         fi
                     done
                 fi
 
-                if [[ -n "${running_kernel_pkg}" ]]; then
-                    headers_pkg="${running_kernel_pkg}-headers"
-                    if pacman -Si "${headers_pkg}" &>/dev/null; then
-                        pkgs+=("${headers_pkg}")
-                    else
-                        die "Kernel headers package '${headers_pkg}' not found for running kernel '${running_kernel_pkg}'"
-                    fi
+                if [[ -n "${kernel_pkg}" ]]; then
+                    headers_pkg="${kernel_pkg}-headers"
                 else
-                    if pacman -Si "linux-headers-${kver}" &>/dev/null; then
-                        pkgs+=("linux-headers-${kver}")
-                    else
-                        die "Cannot find kernel headers for ${kver}. ZFS requires matching kernel headers."
-                    fi
+                    headers_pkg="linux-headers-${kver}"
+                fi
+
+                if pacman -Si "${headers_pkg}" &>/dev/null; then
+                    pkgs+=("${headers_pkg}")
+                else
+                    die "Cannot find kernel headers package for running kernel (${kver}). Tried: ${headers_pkg}"
                 fi
             fi
             ;;
@@ -104,17 +102,14 @@ EOF
         kver=$(uname -r)
         if ! modprobe zfs 2>/dev/null; then
             log_info "Building ZFS module for kernel ${kver}..."
-            local dkms_output dkms_rc
-            dkms_output=$(dkms autoinstall 2>&1) || true
-            dkms_rc=$?
-            log_info "DKMS output: ${dkms_output}"
+            dkms autoinstall 2>&1 | while IFS= read -r line; do log_info "DKMS: ${line}"; done || true
 
             local waited=0
             while dkms status 2>/dev/null | grep -q 'zfs.*: added'; do
                 sleep 2
                 waited=$((waited + 2))
                 if [[ ${waited} -ge 120 ]]; then
-                    log_error "DKMS build timed out after 120 seconds."
+                    log_error "DKMS build timed out."
                     break
                 fi
             done
@@ -122,7 +117,7 @@ EOF
             if modprobe zfs 2>/dev/null; then
                 log_info "ZFS kernel module loaded successfully."
             else
-                log_error "ZFS kernel module still unavailable after DKMS build."
+                log_error "ZFS kernel module still unavailable."
                 log_error "DKMS status:"
                 dkms status 2>&1 | while IFS= read -r line; do log_error "  ${line}"; done
                 local make_log
@@ -131,8 +126,8 @@ EOF
                     log_error "Last 20 lines of ${make_log}:"
                     tail -n 20 "${make_log}" | while IFS= read -r line; do log_error "  ${line}"; done
                 fi
-                log_error "Your kernel (${kver}) may be incompatible with the available zfs-dkms."
-                log_error "Consider using a live ISO with a standard kernel (linux or linux-lts)."
+                log_error "Kernel ${kver} may be incompatible with the available zfs-dkms."
+                log_error "Use a live ISO with a standard kernel (linux or linux-lts)."
                 return 1
             fi
         else

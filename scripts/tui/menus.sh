@@ -25,7 +25,7 @@ tui_select_filesystem() {
         "ext4" "btrfs" "xfs" "f2fs" "bcachefs" "exfat" "zfs") || return 1
 
     if [[ "${fs}" == "zfs" ]]; then
-        tui_msg_quick "ZFS Selected" "ZFS requires additional setup. Preflight will handle it."
+        tui_msg_quick "ZFS Selected" "ZFS requires additional setup. Experimental fixes are underway. Don't use this."
     elif [[ "${fs}" == "bcachefs" ]]; then
         pacman -Si bcachefs-tools &>/dev/null || {
             tui_msg_quick "bcachefs Notice" "bcachefs tools may need to be installed."
