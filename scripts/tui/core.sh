@@ -45,16 +45,16 @@ tui_yesno() {
 
 tui_input() {
     local title="${1}" msg="${2}" default="${3:-}" result
-    gum style --bold --foreground 212 "── ${title} ──"
-    [[ -n "${msg}" ]] && gum format "${msg}"
+    gum style --bold --foreground 212 "── ${title} ──" >&2
+    [[ -n "${msg}" ]] && gum format "${msg}" >&2
     result=$(gum input --value "${default}" --prompt "> " </dev/tty) || true
     printf '%s' "${result}"
 }
 
 tui_password() {
     local title="${1}" msg="${2}"
-    gum style --bold --foreground 212 "── ${title} ──"
-    [[ -n "${msg}" ]] && gum format "${msg}"
+    gum style --bold --foreground 212 "── ${title} ──" >&2
+    [[ -n "${msg}" ]] && gum format "${msg}" >&2
     gum input --password --prompt "> " </dev/tty || true
 }
 
@@ -62,7 +62,7 @@ tui_password_confirm() {
     local title="${1:-Password}" prompt="${2:-Enter password:}" confirm_prompt="${3:-Confirm password:}"
     local pass confirm
     while true; do
-        gum style --bold --foreground 212 "── ${title} ──"
+        gum style --bold --foreground 212 "── ${title} ──" >&2
         pass=$(gum input --password --prompt "${prompt}: " </dev/tty) || true
         [[ -n "${pass}" ]] || return 1
         confirm=$(gum input --password --prompt "${confirm_prompt}: " </dev/tty) || true
@@ -78,8 +78,8 @@ tui_password_confirm() {
 tui_menu() {
     local title="${1}" msg="${2}"
     shift 2
-    gum style --bold --foreground 212 "── ${title} ──"
-    [[ -n "${msg}" ]] && gum format "${msg}"
+    gum style --bold --foreground 212 "── ${title} ──" >&2
+    [[ -n "${msg}" ]] && gum format "${msg}" >&2
     gum choose --height=15 "$@" </dev/tty
 }
 
@@ -87,16 +87,16 @@ tui_menu_custom() {
     local title="${1}" msg="${2}"
     local height="${3:-15}"
     shift 3
-    gum style --bold --foreground 212 "── ${title} ──"
-    [[ -n "${msg}" ]] && gum format "${msg}"
+    gum style --bold --foreground 212 "── ${title} ──" >&2
+    [[ -n "${msg}" ]] && gum format "${msg}" >&2
     gum choose --height="${height}" "$@" </dev/tty
 }
 
 tui_checklist() {
     local title="${1}" msg="${2}"
     shift 2
-    gum style --bold --foreground 212 "── ${title} ──"
-    [[ -n "${msg}" ]] && gum format "${msg}"
+    gum style --bold --foreground 212 "── ${title} ──" >&2
+    [[ -n "${msg}" ]] && gum format "${msg}" >&2
     gum choose --no-limit --height=15 "$@" </dev/tty
 }
 
