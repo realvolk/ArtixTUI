@@ -58,6 +58,12 @@ tui_password() {
     gum input --password --prompt "> " </dev/tty || true
 }
 
+tui_msg_quick() {
+    local title="${1}" msg="${2}"
+    gum style --bold --foreground 212 "── ${title} ──"
+    gum format "${msg}"
+}
+
 tui_password_confirm() {
     local title="${1:-Password}" prompt="${2:-Enter password:}" confirm_prompt="${3:-Confirm password:}"
     local pass confirm
@@ -71,7 +77,7 @@ tui_password_confirm() {
             printf '%s\n' "${pass}"
             return 0
         fi
-        tui_msg "Mismatch" "Passwords do not match. Try again."
+        tui_msg_quick "Mismatch" "Passwords do not match. Try again."
     done
 }
 

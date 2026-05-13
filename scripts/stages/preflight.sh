@@ -73,7 +73,7 @@ stage_preflight() {
             ;;
         zfs)
             command_exists zpool \
-                || die 'zfs tools are unavailable in the live environment';
+                || pkgs+=(zfs-utils);
             ;;
     esac
 
