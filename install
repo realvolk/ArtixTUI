@@ -79,10 +79,10 @@ verify_installer_layout() {
 source_tree() {
     local dir file
     for dir in "$@"; do
-        [[ -d "${SCRIPT_DIR}/${dir}" ]] || die "missing script directory: ${dir}"
+        [[ -d "${SCRIPT_DIR}/${dir}" ]] || { printf '[!] missing directory: %s\n' "${dir}" >&2; return 1; }
         while IFS= read -r -d '' file; do
-            # shellcheck source=/dev/null
-            source "${file}"
+            printf '[*] Sourcing: %s\n' "${file}" >&2
+            source "${file}" || { printf '[!] Failed to source: %s\n' "${file}" >&2; return 1; }
         done < <(find "${SCRIPT_DIR}/${dir}" -maxdepth 1 -type f -name '*.sh' -print0 | sort -z)
     done
 }
