@@ -203,7 +203,7 @@ main() {
             }
         fi
     fi
-
+    clear
     main_menu
 
     if [[ "${DEBUG}" == 'true' ]]; then

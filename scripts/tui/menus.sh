@@ -171,6 +171,8 @@ tui_select_offline_mode() {
 tui_select_username() {
     local u
     u=$(tui_input "Username" "Enter username:" "artix") || return 1
+    u="${u//[$'\r'$'\n'$'\t' ]/}"
+    [[ -n "${u}" ]] || return 1
     state_set USER_NAME "${u}"
 }
 
@@ -190,10 +192,15 @@ tui_select_hostname() {
     local h
     while true; do
         h=$(tui_input "Hostname" "Enter system hostname:" "artix") || return 1
-        if [[ "${h}" =~ ^[a-zA-Z0-9][a-zA-Z0-9\-]*$ ]]; then break; fi
+        # Trim all whitespace and carriage returns
+        h="${h//[$'\r'$'\n'$'\t' ]/}"
+        [[ -n "${h}" ]] || return 1
+        if [[ "${h}" =~ ^[a-zA-Z0-9][a-zA-Z0-9\-]*$ ]]; then
+            state_set HOSTNAME "${h}"
+            return 0
+        fi
         tui_msg "Invalid Hostname" "Allowed: a-z, A-Z, 0-9, dash. Start with letter/digit."
     done
-    state_set HOSTNAME "${h}"
 }
 
 tui_select_timezone() {
