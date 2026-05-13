@@ -74,16 +74,26 @@ stage_preflight() {
         zfs)
             if ! command_exists zpool || ! modprobe zfs 2>/dev/null; then
                 pkgs+=(zfs-utils dkms zfs-dkms)
-                local kver
+                local kver hdr_pkg
                 kver=$(uname -r)
                 if [[ "${kver}" == *-lts* ]]; then
-                    pkgs+=(linux-lts-headers)
+                    hdr_pkg='linux-lts-headers'
                 elif [[ "${kver}" == *-zen* ]]; then
-                    pkgs+=(linux-zen-headers)
+                    hdr_pkg='linux-zen-headers'
                 elif [[ "${kver}" == *-hardened* ]]; then
-                    pkgs+=(linux-hardened-headers)
+                    hdr_pkg='linux-hardened-headers'
                 else
-                    pkgs+=(linux-headers)
+                    hdr_pkg='linux-headers'
+                fi
+                if pacman -Si "${hdr_pkg}" &>/dev/null; then
+                    pkgs+=("${hdr_pkg}")
+                else
+                    hdr_pkg=$(pacman -Qsq 'linux[0-9]*-headers' 2>/dev/null | head -n1)
+                    if [[ -n "${hdr_pkg}" ]]; then
+                        pkgs+=("${hdr_pkg}")
+                    else
+                        die "Cannot determine kernel headers package for ${kver}"
+                    fi
                 fi
             fi
             ;;
@@ -97,10 +107,18 @@ stage_preflight() {
 
         log_info "Preflight dependencies installed.";
     fi;
-
-    # Ensure ZFS module is loaded after installation
+    
     if [[ "${fs_type}" == 'zfs' ]]; then
-        modprobe zfs 2>/dev/null || die 'ZFS kernel module still unavailable after installation'
+        if ! modprobe zfs 2>/dev/null; then
+            dkms autoinstall 2>/dev/null || true
+            modprobe zfs 2>/dev/null || {
+                log_error "ZFS kernel module still unavailable."
+                log_error "Your kernel ($(uname -r)) may be incompatible with the installed zfs-dkms."
+                log_error "Try using a standard Artix kernel (linux) for ZFS support."
+                return 1
+            }
+        fi
+        log_info "ZFS kernel module loaded."
     fi
 
     stage_mark_done preflight;
