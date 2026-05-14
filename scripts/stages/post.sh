@@ -31,6 +31,7 @@ export AUDIO_STACK="${audio_stack}"
 export EXTRAS="${extras}"
 cd /root/ArtixTUI || exit 1
 source ./scripts/state.sh
+source ./scripts/common.sh
 source ./scripts/install/services.sh
 source ./scripts/post/drivers.sh
 source ./scripts/post/networking.sh

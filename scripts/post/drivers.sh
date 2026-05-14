@@ -9,7 +9,13 @@ elif [[ -f /usr/local/lib/artix-installer/services.sh ]]; then
 fi
 
 get_gpu_vendor() {
-    lspci -nn 2>/dev/null | awk -F' ' '/VGA|3D/ {print tolower($0)}' | grep -oE 'nvidia|intel|amd' | head -n1 || true
+    local vendors
+    vendors=$(lspci -nn 2>/dev/null | awk '/VGA|3D/' | grep -oiE 'nvidia|intel|amd')
+    if   grep -qi nvidia <<<"${vendors}"; then printf 'nvidia\n'
+    elif grep -qi amd    <<<"${vendors}"; then printf 'amd\n'
+    elif grep -qi intel  <<<"${vendors}"; then printf 'intel\n'
+    else printf 'unknown\n'
+    fi
 }
 
 get_gpu_info() {
@@ -31,13 +37,15 @@ export -f get_gpu_vendor get_gpu_info get_pci_id detect_vm
 install_drivers() {
     local pkgs=() rc=0 initramfs_tool='mkinitcpio'
     local gpu_vendor gpu_info pci_id vm_type x_stack wm_de kernel_choice
-    gpu_vendor=$(get_gpu_vendor)
+    gpu_vendor=$(get_gpu_vendor | tr -d '[:space:]')
+    gpu_vendor="${gpu_vendor:-unknown}"
     gpu_info=$(get_gpu_info)
+    gpu_info="${gpu_info:-Unknown}"
     pci_id=$(get_pci_id)
     vm_type=$(detect_vm)
-    x_stack="$(state_get X_STACK xorg)"
-    wm_de="$(state_get WM_DE none)"
-    kernel_choice="$(state_get KERNEL_CHOICE linux)"
+    x_stack="$(state_get X_STACK xorg | tr -d '[:space:]')"
+    wm_de="$(state_get WM_DE none | tr -d '[:space:]')"
+    kernel_choice="$(state_get KERNEL_CHOICE linux | tr -d '[:space:]')"
 
     mkdir -p /root/ArtixTUI
     : > /root/ArtixTUI/drivers-debug.log
@@ -65,7 +73,7 @@ install_drivers() {
     esac
 
     {
-        log_info "GPU detected: ${gpu_info:-Unknown}"
+        log_info "GPU detected: ${gpu_info}"
         log_info "Virtualization: ${vm_type}"
         log_info "Display stack: ${x_stack}"
         log_info "Kernel: ${kernel_choice}"
@@ -75,12 +83,23 @@ install_drivers() {
             case "${vm_type}" in
                 kvm|qemu)
                     pkgs+=(spice-vdagent qemu-guest-agent)
-                    [[ "${x_stack}" != 'xlibre' ]] && pkgs+=(xf86-video-qxl) ;;
+                    if [[ "${x_stack}" == 'xlibre' ]]; then
+                        pkgs+=(xlibre-video-qxl)
+                    else
+                        pkgs+=(xf86-video-qxl)
+                    fi
+                    ;;
                 vmware)
                     pkgs+=(open-vm-tools)
-                    [[ "${x_stack}" != 'xlibre' ]] && pkgs+=(xf86-video-vmware) ;;
+                    if [[ "${x_stack}" == 'xlibre' ]]; then
+                        pkgs+=(xlibre-video-vmware)
+                    else
+                        pkgs+=(xf86-video-vmware)
+                    fi
+                    ;;
                 oracle|virtualbox)
-                    pkgs+=(virtualbox-guest-utils) ;;
+                    pkgs+=(virtualbox-guest-utils)
+                    ;;
             esac
         fi
 
@@ -108,23 +127,50 @@ install_drivers() {
             fi
         else
             log_info "Unknown GPU → VESA fallback"
-            [[ "${x_stack}" == 'xlibre' ]] && pkgs+=(mesa) || pkgs+=(mesa xf86-video-vesa)
+            if [[ "${x_stack}" == 'xlibre' ]]; then
+                pkgs+=(mesa)
+            else
+                pkgs+=(mesa xf86-video-vesa)
+            fi
         fi
 
         [[ "${x_stack}" == 'xlibre' ]] && pkgs+=(xlibre-xserver) || pkgs+=(xorg-server)
+
         case "${wm_de}" in hyprland|niri|sway) pkgs+=(xorg-xwayland) ;; esac
+
+        # I hate xorg I hate xorg I hate xorg I hate xorg
+        if [[ "${x_stack}" == 'xlibre' ]]; then
+            if pacman -Qq xorg-server &>/dev/null; then
+                log_info "Removing conflicting xorg-server"
+                pacman --color=never --noconfirm -Rns xorg-server || true
+            fi
+        else
+            if pacman -Qq xlibre-xserver &>/dev/null; then
+                log_info "Removing conflicting xlibre-xserver"
+                pacman --color=never --noconfirm -Rns xlibre-xserver || true
+            fi
+        fi
+
+        log_info "Final package list:"
+        printf ' - %s\n' "${pkgs[@]}"
 
         log_info "Installing: ${pkgs[*]}"
         export COLUMNS=80 LINES=24 TERM=dumb
 
-        if pacman --color=never --noconfirm --needed -S "${pkgs[@]}"; then rc=0
-        else rc=$?; log_error "Driver installation failed (rc=${rc})"
+        if pacman --color=never --noconfirm --needed -S "${pkgs[@]}"; then
+            rc=0
+        else
+            rc=$?
+            log_error "Driver installation failed (rc=${rc})"
         fi
 
         if [[ ${rc} -eq 0 && "${gpu_vendor}" == 'nvidia' ]]; then
             log_info "Regenerating initramfs after NVIDIA..."
-            if [[ "${initramfs_tool}" == 'dracut' ]]; then dracut --regenerate-all --force || rc=$?
-            else mkinitcpio -P || rc=$?; fi
+            if [[ "${initramfs_tool}" == 'dracut' ]]; then
+                dracut --regenerate-all --force || rc=$?
+            else
+                mkinitcpio -P || rc=$?
+            fi
         fi
 
         [[ "${vm_type}" == 'kvm' || "${vm_type}" == 'qemu' ]] && enable_service qemu-guest-agent
