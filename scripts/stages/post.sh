@@ -12,6 +12,7 @@ stage_post() {
     kernel_choice="$(state_get KERNEL_CHOICE linux)"
     audio_stack="$(state_get AUDIO_STACK pipewire)"
     extras="$(state_get EXTRAS '')"
+    user_name="$(state_get USER_NAME)"
     log_file='/tmp/post-stage.log'
 
     log_info "Preparing installer environment..."
@@ -29,6 +30,7 @@ export X_STACK="${x_stack}"
 export KERNEL_CHOICE="${kernel_choice}"
 export AUDIO_STACK="${audio_stack}"
 export EXTRAS="${extras}"
+export USER_NAME="${user_name}"
 cd /root/ArtixTUI || exit 1
 source ./scripts/state.sh
 source ./scripts/common.sh
