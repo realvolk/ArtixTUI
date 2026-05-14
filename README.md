@@ -203,4 +203,4 @@ Please test your changes on a live Artix ISO before submitting.
 
 # License
 
-MIT © [realvolk](https://github.com/realvolk) 2026.
+Volk Open License 1.0 © [realvolk](https://github.com/realvolk) 2026.
