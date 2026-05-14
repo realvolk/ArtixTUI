@@ -16,6 +16,12 @@ stage_chroot() {
 
     log_info "Verifying init system: ${init}"
 
+    log_info "Validating display stack compatibility..."
+    if ! validate_display_stack; then
+        log_error "Display stack validation failed. Cannot continue."
+        return 1
+    fi
+
     if ! artix-chroot /mnt pacman -Q "${init}" >/dev/null 2>&1; then
         log_info "Installing init system: ${init}"
         artix-chroot /mnt pacman -S --noconfirm "${init}"

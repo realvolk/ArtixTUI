@@ -83,3 +83,24 @@ command_exists() {
 ensure_dirs() {
     mkdir -p /tmp/artix-installer/{stages,logs}
 }
+
+validate_display_stack() {
+    local x_stack
+    x_stack="$(state_get X_STACK xorg | tr -d '[:space:]')"
+
+    if [[ "${x_stack}" == 'xlibre' ]]; then
+        if artix-chroot /mnt pacman -Qq xorg-server &>/dev/null; then
+            log_error "xorg-server is installed but XLibre was selected."
+            log_error "This means the target system has leftovers from a previous installation."
+            log_error "Remove xorg-server manually or perform a clean installation."
+            return 1
+        fi
+    else
+        if artix-chroot /mnt pacman -Qq xlibre-xserver &>/dev/null; then
+            log_error "xlibre-xserver is installed but Xorg was selected."
+            log_error "Remove xlibre-xserver manually or perform a clean installation."
+            return 1
+        fi
+    fi
+    return 0
+}
