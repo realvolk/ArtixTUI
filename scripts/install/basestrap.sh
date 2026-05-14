@@ -165,12 +165,6 @@ EOF
         efistub) ;;
     esac
 
-    case "${display_manager}" in
-        lightdm) pkgs+=(lightdm lightdm-gtk-greeter "lightdm-${init}") ;;
-        sddm)    pkgs+=(sddm "sddm-${init}") ;;
-        none) ;;
-    esac
-
     printf '%s\n' "${pkgs[@]}" > "${PWD}/artix-pkgs.log"
 
     local debug_log="${PWD}/basestrap-debug.log"

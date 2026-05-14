@@ -2,10 +2,12 @@
 set -Eeuo pipefail
 
 install_desktop() {
-    local wm_de init display_manager kde_profile pkgs
-    wm_de="${WM_DE:-none}"
-    init="${INIT:-openrc}"
-    display_manager="${DISPLAY_MANAGER:-none}"
+    local wm_de init display_manager kde_profile
+    local -a pkgs=()
+
+    wm_de="$(printf '%s' "${WM_DE:-none}" | tr -d '[:space:]')"
+    init="$(printf '%s' "${INIT:-openrc}" | tr -d '[:space:]')"
+    display_manager="$(printf '%s' "${DISPLAY_MANAGER:-none}" | tr -d '[:space:]')"
     kde_profile='none'
 
     if [[ "${wm_de}" == 'kde' ]]; then
@@ -20,21 +22,33 @@ install_desktop() {
     enable_service dbus
 
     case "${wm_de}" in
-        xfce4)       pkgs+=(xfce4 xfce4-goodies) ;;
-        lxqt)        pkgs+=(lxqt) ;;
+        xfce4)    pkgs+=(xfce4 xfce4-goodies) ;;
+        lxqt)     pkgs+=(lxqt) ;;
+        lxde)     pkgs+=(lxde lxappearance) ;;
+        i3wm)     pkgs+=(i3-wm i3status i3lock dmenu xterm) ;;
+        dwm)      pkgs+=(dwm dmenu xterm) ;;
+        icewm)    pkgs+=(icewm icewm-themes xterm) ;;
+        none)     return 0 ;;
+
         kde)
             case "${kde_profile}" in
-                minimal)         pkgs+=(plasma-desktop dolphin konsole xdg-desktop-portal-kde) ;;
-                full|edge)       pkgs+=(plasma kde-applications xdg-desktop-portal-kde) ;;
-                desktop|*)       pkgs+=(plasma xdg-desktop-portal-kde) ;;
+                minimal)       pkgs+=(plasma-desktop dolphin konsole xdg-desktop-portal-kde) ;;
+                full|edge)     pkgs+=(plasma kde-applications xdg-desktop-portal-kde) ;;
+                desktop|*)     pkgs+=(plasma xdg-desktop-portal-kde) ;;
             esac ;;
-        lxde)        pkgs+=(lxde lxappearance) ;;
-        hyprland)    pkgs+=(hyprland foot waybar wofi xdg-desktop-portal-hyprland seatd "seatd-${init}") ;;
+
+        hyprland)
+            pkgs+=(hyprland foot waybar wofi xdg-desktop-portal-hyprland seatd "seatd-${init}") ;;
+
+        niri)
+            pkgs+=(niri foot waybar fuzzel xdg-desktop-portal-gtk seatd "seatd-${init}") ;;
+
+        sway)
+            pkgs+=(sway swaybg swaylock swayidle foot waybar wofi xdg-desktop-portal-wlr seatd "seatd-${init}") ;;
+
         mango)
             log_info "Setting up Chaotic-AUR for MangoWM..."
-            if [[ "$(state_get ENABLE_ARCH_REPOS no)" == 'yes' ]]; then
-                pacman -S --noconfirm archlinux-keyring || { log_error "Failed to install Arch Linux keyring."; return 1; }
-            fi
+            [[ "$(state_get ENABLE_ARCH_REPOS no)" == 'yes' ]] && pacman -S --noconfirm archlinux-keyring || { log_error "Failed to install Arch Linux keyring."; return 1; }
             pacman-key --init || { log_error "Failed to initialize pacman keys."; return 1; }
             pacman-key --populate artix archlinux || { log_error "Failed to populate pacman keys."; return 1; }
             rm -f /var/cache/pacman/pkg/chaotic-keyring* /var/cache/pacman/pkg/chaotic-mirrorlist*
@@ -47,15 +61,16 @@ Include = /etc/pacman.d/chaotic-mirrorlist
 EOF
             pacman -Sy --noconfirm || { log_error "Failed to sync package databases."; return 1; }
             pkgs+=(foot waybar wofi xdg-desktop-portal-hyprland seatd "seatd-${init}" base-devel git) ;;
-        niri)        pkgs+=(niri foot waybar fuzzel xdg-desktop-portal-gtk seatd "seatd-${init}") ;;
-        sway)        pkgs+=(sway swaybg swaylock swayidle foot waybar wofi xdg-desktop-portal-wlr seatd "seatd-${init}") ;;
-        i3wm)        pkgs+=(i3-wm i3status i3lock dmenu xterm) ;;
-        dwm)         pkgs+=(dwm dmenu xterm) ;;
-        icewm)       pkgs+=(icewm icewm-themes xterm) ;;
-        none)        return 0 ;;
+    esac
+
+    case "${display_manager}" in
+        lightdm) pkgs+=(lightdm lightdm-gtk-greeter "lightdm-${init}") ;;
+        sddm)    pkgs+=(sddm "sddm-${init}") ;;
     esac
 
     log_info "Installing desktop environment..."
+    log_info "Desktop package list:"
+    printf ' - %s\n' "${pkgs[@]}"
     pacman -S --noconfirm --needed "${pkgs[@]}" || { log_error "Failed to install desktop packages."; return 1; }
 
     if [[ "${wm_de}" == 'mango' ]]; then
@@ -70,15 +85,15 @@ EOF
     fi
 
     case "${display_manager}" in
-        lightdm) enable_service lightdm ;;
-        sddm)    enable_service sddm ;;
+        lightdm) enable_service lightdm || { log_error "Failed to enable LightDM."; return 1; } ;;
+        sddm)    enable_service sddm || { log_error "Failed to enable SDDM."; return 1; } ;;
     esac
 
     case "${wm_de}" in
         hyprland|mango|niri|sway)
             log_info "Verifying seatd service..."
             service_exists seatd || { log_error "seatd service missing for init: ${init}"; return 1; }
-            enable_service seatd ;;
+            enable_service seatd || { log_error "Failed to enable seatd."; return 1; } ;;
     esac
 
     log_info "Desktop installation complete."

@@ -138,19 +138,6 @@ install_drivers() {
 
         case "${wm_de}" in hyprland|niri|sway) pkgs+=(xorg-xwayland) ;; esac
 
-        # I hate xorg I hate xorg I hate xorg I hate xorg
-        if [[ "${x_stack}" == 'xlibre' ]]; then
-            if pacman -Qq xorg-server &>/dev/null; then
-                log_info "Removing conflicting xorg-server"
-                pacman --color=never --noconfirm -Rns xorg-server || true
-            fi
-        else
-            if pacman -Qq xlibre-xserver &>/dev/null; then
-                log_info "Removing conflicting xlibre-xserver"
-                pacman --color=never --noconfirm -Rns xlibre-xserver || true
-            fi
-        fi
-
         log_info "Final package list:"
         printf ' - %s\n' "${pkgs[@]}"
 
@@ -175,7 +162,11 @@ install_drivers() {
 
         [[ "${vm_type}" == 'kvm' || "${vm_type}" == 'qemu' ]] && enable_service qemu-guest-agent
 
-        log_info "Driver installation complete."
+        if [[ ${rc} -eq 0 ]]; then
+            log_info "Driver installation complete."
+        else
+            log_error "Driver installation failed."
+        fi
     } >> /root/ArtixTUI/drivers-debug.log 2>&1
 
     if [[ ${rc} -ne 0 && "${gpu_vendor}" == 'nvidia' ]]; then
