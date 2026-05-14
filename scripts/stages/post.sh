@@ -4,7 +4,7 @@ set -Eeuo pipefail
 stage_post() {
     if stage_should_skip post; then return 0; fi
 
-    local init network_stack wm_de x_stack kernel_choice audio_stack extras log_file rc=0
+    local init network_stack wm_de x_stack kernel_choice audio_stack extras fs_type log_file rc=0
     init="$(state_get INIT)"
     network_stack="$(state_get NETWORK_STACK)"
     wm_de="$(state_get WM_DE)"
@@ -12,6 +12,7 @@ stage_post() {
     kernel_choice="$(state_get KERNEL_CHOICE linux)"
     audio_stack="$(state_get AUDIO_STACK pipewire)"
     extras="$(state_get EXTRAS '')"
+    fs_type="$(state_get FS_TYPE ext4)"
     user_name="$(state_get USER_NAME)"
     log_file='/tmp/post-stage.log'
 
@@ -31,6 +32,7 @@ export KERNEL_CHOICE="${kernel_choice}"
 export AUDIO_STACK="${audio_stack}"
 export EXTRAS="${extras}"
 export USER_NAME="${user_name}"
+export FS_TYPE="${fs_type}"
 cd /root/ArtixTUI || exit 1
 source ./scripts/state.sh
 source ./scripts/common.sh
@@ -51,6 +53,23 @@ log_info "Configuring audio..."
 setup_audio
 log_info "Installing extras..."
 install_extras
+if [[ "${FS_TYPE}" == 'zfs' ]]; then
+    log_info "Enabling ZFS services..."
+    rc-update add zfs-import boot
+    rc-update add zfs-mount boot
+    rc-update add zfs-zed default || true
+fi
+if [[ "${FS_TYPE}" == "xfs" ]]; then
+    local root_device
+    root_device=\$(findmnt -n -o SOURCE / 2>/dev/null || true)
+    if [[ -n "\${root_device}" ]]; then
+        log_info "Checking XFS bigtime support on \${root_device}..."
+        if ! xfs_db -r -c "version" "\${root_device}" 2>/dev/null | grep -q bigtime; then
+            log_warn "XFS timestamps will end in 2038."
+            log_warn "Run 'xfs_admin -O bigtime=1 \${root_device}' from rescue to upgrade."
+        fi
+    fi
+fi
 log_info "Post-install configuration complete."
 EOF
     then

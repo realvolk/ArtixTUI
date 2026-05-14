@@ -1,4 +1,4 @@
-MIT License
+Volk Open License 1.0
 
 Copyright (c) 2026 Volk
 
@@ -9,8 +9,16 @@ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. The above copyright notice and this permission notice shall be included in
+   all copies of the Software, in whole or in part, and in any modified
+   versions.
+
+2. You may not represent the Software, in whole or in part, as your own
+   original creation. Any modified version must clearly indicate that changes
+   have been made, and you must not remove or alter any copyright notices,
+   attributions, or this license text. You are free to fork and to create
+   derivative works, provided you do not claim the unmodified Software as
+   your sole creation.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,

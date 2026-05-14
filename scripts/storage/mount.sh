@@ -88,7 +88,11 @@ mount_filesystems() {
             mountpoint -q /mnt || die 'failed to mount ZFS root dataset'
             ;;
         ext4|xfs|f2fs|bcachefs)
-            mount -t "${fs_type}" "${root_part}" /mnt
+            local mount_opts="defaults"
+            if [[ "$(lsblk -dno ROTA "${root_part}" 2>/dev/null)" == "0" ]]; then
+                mount_opts="${mount_opts},discard"
+            fi
+            mount -t "${fs_type}" -o "${mount_opts}" "${root_part}" /mnt
             mountpoint -q /mnt || die 'failed to mount root filesystem'
             ;;
         exfat)

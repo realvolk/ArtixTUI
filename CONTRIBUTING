@@ -1,0 +1,48 @@
+CONTRIBUTING
+
+ArtixTUI welcomes contributions from anyone, provided they fall within a
+reasonable scope aligned with the project's goals.
+
+## Testing
+
+Testing the software in good faith, on real hardware or virtual machines, is
+strongly encouraged. Testers help improve reliability and user experience.
+No warranty is provided, and testers assume all risks; the license's
+disclaimer of liability applies in full.
+
+## Pull Requests and Code Contributions
+
+All contributions (pull requests, patches, suggestions) are reviewed
+carefully before acceptance. By submitting code, you confirm that you have
+the right to contribute it under the project's license.
+
+Before submitting, contributors are expected to have tested their changes
+locally, including running through multiple representative installation
+scenarios (e.g., different filesystems, init systems, or desktop choices)
+to verify that no regressions or unexpected failures are introduced.
+Untested or poorly verified changes may be rejected or delayed pending
+further validation.
+
+These testing requirements apply to external contributors. The project
+maintainer reserves the right to commit changes directly to the repository
+without prior public testing or review. All such commits remain subject to
+the license's disclaimer of liability.
+
+Malicious or intentionally harmful contributions will be rejected and the
+submitter permanently banned from further participation. This includes, but
+is not limited to, introducing backdoors, spyware, logic bombs, or any code
+intended to cause damage or security vulnerabilities.
+
+## Credit
+
+Contributors whose code is merged into the main repository will be credited
+in the project's README.md, listing their name alongside the release
+version(s) their work appears in, unless they request otherwise. Credit is
+given as a sign of appreciation and does not imply any additional rights or
+responsibilities.
+
+## Code of Conduct
+
+Be respectful, constructive, and honest. Treat others as you would in a
+professional engineering team. Harassment, spam, or disruptive behaviour
+will not be tolerated.

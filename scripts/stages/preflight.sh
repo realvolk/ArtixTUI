@@ -96,6 +96,20 @@ EOF
             pacman -S --noconfirm --needed "${pkgs[@]}";
         log_info "Preflight dependencies installed.";
     fi;
+
+    if [[ "${fs_type}" == 'bcachefs' ]]; then
+        local bcachefs_ver kernel_ver
+        if command -v bcachefs >/dev/null; then
+            bcachefs_ver=$(bcachefs version 2>/dev/null | grep -oP '\d+\.\d+' | head -1) || true
+            if [[ -n "${bcachefs_ver}" ]]; then
+                kernel_ver=$(uname -r | cut -d. -f1,2)
+                if [[ "$(printf '%s\n' "${bcachefs_ver}" "${kernel_ver}" | sort -V | head -n1)" != "${bcachefs_ver}" ]]; then
+                    log_warn "bcachefs-tools version ${bcachefs_ver} may be older than kernel ${kernel_ver}."
+                    log_warn "Update the live ISO or bcachefs-tools to avoid superblock errors."
+                fi
+            fi
+        fi
+    fi
     
     if [[ "${fs_type}" == 'zfs' ]]; then
         local kver

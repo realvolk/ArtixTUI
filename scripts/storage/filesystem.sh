@@ -60,10 +60,30 @@ create_filesystems() {
     case "${fs_type}" in
         btrfs)    log_info "Creating BTRFS filesystem..." ; mkfs.btrfs -f "${root_part}" ;;
         ext4)     log_info "Creating EXT4 filesystem..."  ; mkfs.ext4 -F "${root_part}" ;;
-        xfs)      log_info "Creating XFS filesystem..."   ; mkfs.xfs -f "${root_part}" ;;
-        f2fs)     log_info "Creating F2FS filesystem..."  ; mkfs.f2fs -f "${root_part}" ;;
+        xfs)
+            log_info "Creating XFS filesystem (GRUB-compatible)..."
+            local xfs_config="/usr/share/xfsprogs/mkfs/lts_6.6.conf"
+            if [[ -f "${xfs_config}" ]]; then
+                mkfs.xfs -f -c options="${xfs_config}" "${root_part}"
+            else
+                mkfs.xfs -f "${root_part}"
+                log_warn "XFS LTS config not found – using upstream defaults. GRUB may fail if features are incompatible."
+            fi
+            ;;
+        f2fs)
+            log_info "Creating F2FS filesystem..."
+            local dev_rota
+            dev_rota=$(lsblk -dno ROTA "${root_part}" 2>/dev/null)
+            if [[ "${dev_rota}" == "0" ]]; then
+                log_warn "F2FS on non‑rotational SSD – ext4 or XFS often perform better."
+                if ! tui_yesno "F2FS on SSD" "F2FS is designed for raw flash (eMMC/SD/USB). Continue?"; then
+                    die "User aborted F2FS creation"
+                fi
+            fi
+            mkfs.f2fs -f -O extra_attr,compression -O compress_algorithm=zstd "${root_part}"
+            ;;
         bcachefs) log_info "Creating Bcachefs filesystem..."; mkfs.bcachefs --force "${root_part}" ;;
-        exfat)    log_info "Creating exFAT filesystem..." ; mkfs.exfat "${root_part}" ;;
+        exfat)    log_info "Creating exFAT filesystem..." ; mkfs.exfat -L "root" "${root_part}" ;;
         zfs)
             log_info "Clearing old ZFS labels..."
             zpool labelclear -f "${root_part}" 2>/dev/null || true

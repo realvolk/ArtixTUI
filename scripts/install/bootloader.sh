@@ -2,18 +2,34 @@
 set -Eeuo pipefail
 
 configure_bootloader() {
-    local bootloader kernel
+    local bootloader kernel fs_type root_param=''
     bootloader="$(state_get BOOTLOADER grub)"
     kernel="$(state_get KERNEL_CHOICE linux)"
+    fs_type="$(state_get FS_TYPE)"
+    [[ "${fs_type}" == 'zfs' ]] && root_param='root=ZFS=zroot/root'
 
     log_info "Generating initramfs..."
     artix-chroot /mnt mkinitcpio -P || die 'failed to generate initramfs'
+    local root_device
+    root_device=$(artix-chroot /mnt findmnt -n -o SOURCE /) || true
+    [[ -n "${root_device}" ]] || die 'failed to detect root device'
 
     case "${bootloader}" in
         grub)
             log_info "Installing GRUB..."
             findmnt -rn -o FSTYPE /mnt/boot/efi | grep -qx 'vfat' || die 'EFI partition not mounted as vfat'
+
+            if [[ "${fs_type}" == "xfs" ]]; then
+                log_info "Verifying XFS features for GRUB compatibility..."
+                if artix-chroot /mnt xfs_db -r -c "version" "${root_device}" 2>/dev/null | grep -qE 'bigtime|inobtcount|reflink'; then
+                    die "XFS features on ${root_device} are too new for GRUB. Reformat with lts_6.6.conf or use rEFInd."
+                fi
+            fi
+
             artix-chroot /mnt grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=ARTIX || die 'grub-install failed'
+            if [[ -n "${root_param}" ]]; then
+                artix-chroot /mnt sed -i "s|^GRUB_CMDLINE_LINUX=.*|GRUB_CMDLINE_LINUX=\"${root_param}\"|" /etc/default/grub
+            fi
             log_info "Generating GRUB configuration..."
             artix-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg || die 'grub-mkconfig failed'
             ;;
@@ -64,7 +80,12 @@ configure_bootloader() {
             fi
 
             local loader="\\EFI\\Artix\\${kernel_basename}"
-            local cmdline="root=UUID=${root_uuid} rw ${microcode_image_str} initrd=\\EFI\\Artix\\${initramfs_basename}"
+            local cmdline
+            if [[ "${fs_type}" == 'zfs' ]]; then
+                cmdline="root=ZFS=zroot/root rw ${microcode_image_str} initrd=\\EFI\\Artix\\${initramfs_basename}"
+            else
+                cmdline="root=UUID=${root_uuid} rw ${microcode_image_str} initrd=\\EFI\\Artix\\${initramfs_basename}"
+            fi
 
             log_info "Creating EFI boot entry..."
             artix-chroot /mnt efibootmgr --create --disk "${esp_disk}" --part "${esp_part}" \

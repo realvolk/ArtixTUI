@@ -153,7 +153,7 @@ EOF
             fi
             pacman-key --recv-keys F75D9D76 --keyserver hkp://keyserver.ubuntu.com
             pacman-key --lsign-key F75D9D76
-            pacman -S --noconfirm --needed dkms zfs-dkms zfs-utils
+            pacman -S --noconfirm --needed dkms zfs-dkms zfs-utils zfs-initramfs
             log_warn "ZFS support is experimental. DKMS rebuilds may be required."
             ;;
         *) die "unsupported filesystem: ${fs_type}" ;;
@@ -217,6 +217,14 @@ EOF
     log_info "Configuring timezone..."
     artix-chroot /mnt ln -sf "/usr/share/zoneinfo/${timezone}" /etc/localtime
     artix-chroot /mnt hwclock --systohc
+
+    if [[ "${fs_type}" == 'zfs' ]]; then
+        log_info "Generating hostid for ZFS..."
+        artix-chroot /mnt zgenhostid
+
+        log_info "Adding ZFS hook to mkinitcpio..."
+        artix-chroot /mnt sed -i 's/^HOOKS=.*/HOOKS=(base udev autodetect modconf block keyboard zfs filesystems)/' /etc/mkinitcpio.conf
+    fi
 
     if [[ "${kernel}" == 'tkg' ]]; then
         log_info "Cloning linux-tkg repository..."
