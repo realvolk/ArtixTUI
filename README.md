@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/realvolk/ArtixTUI/blob/main/.github/artix-logo.png" width="196" alt="Artix Linux">
+  <img src="https://github.com/realvolk/ArtixTUI/blob/main/.github/artixtui.png" width="196" alt="Artix Linux">
 </p>
 
 <h1 align="center">ArtixTUI</h1>
@@ -53,7 +53,7 @@ You'll be greeted by a main menu where you choose your installation mode.
 | 🔵 Manual | You select a disk; the installer detects what's already done and resumes. |
 | 🟡 Resume | Continue an interrupted installation from the last saved stage. |
 | 🟠 Recovery | Scan `/mnt` for an existing system, reconstruct state, and repair. |
-| 🔴 Power User | Compile everything from source, Gentoo-style (`CFLAGS`, `MAKEOPTS`, etc.) — coming in v7.1 |
+| 🔴 Power User | Compile everything from source, Gentoo-style (`CFLAGS`, `MAKEOPTS`, etc.) — coming in v7.2? |
 
 A debug toggle is available for every mode from the same menu.
 
@@ -137,7 +137,11 @@ Everything else is handled by the installer itself.
 
 ```text
 ArtixTUI/
+├── .github/                    # Images, etc.
+│   └── artixtui.png            # 🩵
 ├── install                     # entry point
+├── LICENSE                     # Volk Open License 1.0
+├── CONTRIBUTING                # Contributions file
 ├── VERSION                     # version file for auto-update
 ├── scripts/
 │   ├── common.sh               # logging, helpers, requirements
@@ -195,12 +199,12 @@ ArtixTUI/
 
 # Contributing
 
-Bug reports and pull requests are welcome.
-
-Please test your changes on a live Artix ISO before submitting.
+Contributions are welcome and appreciated.
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on testing,
+submissions, and code of conduct.
 
 ---
 
 # License
 
-Volk Open License 1.0 © [realvolk](https://github.com/realvolk) 2026.
+Licensed under the [Volk Open License 1.0](LICENSE) © [realvolk](https://github.com/realvolk) 2026.
