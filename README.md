@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Version-v7.1.4.7-blue?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/Version-v7.1.5.0-blue?style=flat-square" alt="Version">
   <img src="https://img.shields.io/badge/Language-Bash-4EAA25?style=flat-square&logo=gnu-bash" alt="Bash">
   <img src="https://img.shields.io/badge/TUI-gum-FFB6C1?style=flat-square" alt="gum">
   <img src="https://img.shields.io/badge/License-Volk Open License 1.0-yellow?style=flat-square" alt="License">
@@ -84,7 +84,7 @@ A debug toggle is available for every mode from the same menu.
   - `btrfs`
   - `xfs`
   - `f2fs`
-  - `bcachefs`
+  - `bcachefs` - Temporarily Disabled (bcachefs-tools being rewritten in Rust)
   - `exfat`
   - `zfs`
 - Desktop environments:
@@ -168,6 +168,7 @@ ArtixTUI/
 │   │   ├── drivers.sh          # GPU, VM, and kernel drivers
 │   │   ├── desktop.sh          # desktop environment installation
 │   │   ├── audio.sh            # PipeWire / PulseAudio setup
+│   │   ├── kernels.sh          # Temporary Bazzite-bin functionality
 │   │   └── extras.sh           # optional packages
 │   └── stages/
 │       ├── preflight.sh        # environment preparation

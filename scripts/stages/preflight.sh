@@ -66,29 +66,31 @@ stage_preflight() {
         exfat)    command_exists mkfs.exfat || pkgs+=(exfatprogs) ;;
         bcachefs)
             if ! command_exists mkfs.bcachefs || ! modprobe bcachefs 2>/dev/null; then
-                if ! pacman -Q artix-archlinux-support &>/dev/null; then
-                    log_info "Installing archlinux-support for bcachefs..."
-                    pacman -S --noconfirm --needed artix-archlinux-support
+                log_info "Building bcachefs-tools from source..."
+                local bcachefs_src='/tmp/bcachefs-tools-src'
+                rm -rf "${bcachefs_src}"
+                # Rust. I need RUST to build bcachefs tools. I'm going to gouge my eyes out.
+                pacman -S --noconfirm --needed base-devel git rust clang liburcu libaio keyutils lz4 zstd libscrypt
+                # Out of all things the maintainer could have chosen...
+                # I would rather compile straight ASM than this. But oh well.
+                git clone --depth 1 https://evilpiepirate.org/git/bcachefs-tools.git "${bcachefs_src}" || {
+                    die "Failed to clone bcachefs-tools source repository"
+                }
+
+                make -C "${bcachefs_src}" -j$(nproc) || die "Failed to build bcachefs-tools"
+                make -C "${bcachefs_src}" install || die "Failed to install bcachefs-tools"
+
+                rm -rf "${bcachefs_src}"
+
+                if ! command -v mkfs.bcachefs >/dev/null 2>&1; then
+                    die "mkfs.bcachefs still unavailable after building"
                 fi
-                if ! grep -q '^\[extra\]' /etc/pacman.conf; then
-                    cat <<'EOF' >> /etc/pacman.conf
-[extra]
-Include = /etc/pacman.d/mirrorlist-arch
-EOF
-                    pacman -Sy --noconfirm
-                fi
-                pkgs+=(bcachefs-tools bcachefs-dkms)
-                # Detect kernel for headers
-                local kver kernel_pkg headers_pkg
-                kver=$(uname -r)
-                kernel_pkg=$(pacman -Qqo "/lib/modules/${kver}" 2>/dev/null | grep -v -- '-headers' | head -n1)
-                if [[ -n "${kernel_pkg}" ]]; then
-                    headers_pkg="${kernel_pkg}-headers"
-                    pkgs+=("${headers_pkg}")
-                else
-                    pkgs+=("linux-headers-${kver}")
-                fi
+
+                log_info "bcachefs-tools built and installed successfully"
             fi
+            modprobe bcachefs 2>/dev/null || {
+                log_warn "bcachefs kernel module not available. DKMS may be required."
+            }
             ;;
         zfs)
             if [[ "${target_kernel}" != "linux" &&

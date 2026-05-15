@@ -39,12 +39,13 @@ tui_select_filesystem() {
     fs=$(tui_menu "Filesystem" "Select filesystem:" "${fs_options[@]}") || return 1
 
     if [[ "${fs}" == "zfs" ]]; then
-        tui_msg_quick "ZFS Selected" "ZFS requires additional setup. Experimental fixes applied since v7.1.0.0!"
+        tui_msg_quick "ZFS Selected" "ZFS likes to break. You're on your own. Good luck!"
     elif [[ "${fs}" == "bcachefs" ]]; then
-        pacman -Si bcachefs-tools &>/dev/null || {
-            tui_msg_quick "bcachefs Notice" "bcachefs tools may need to be installed."
-        }
+        tui_msg "Unavailable" "Bcachefs-tools is temporarily disabled for stability reasons (Rust rewrite W.I.P)."
+        tui_select_filesystem
+        return
     fi
+
     state_set FS_TYPE "${fs}"
 }
 
