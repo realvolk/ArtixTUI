@@ -68,31 +68,27 @@ EOF
                     pacman -Sl archzfs >/dev/null 2>&1 || die "archzfs repository unusable"
                 fi
 
-                pkgs+=(zfs-utils dkms zfs-dkms)
+                local live_kernel
+                live_kernel=$(uname -r)
+                local zfs_pkg=""
 
-                local kver kernel_pkg headers_pkg
-                kver=$(uname -r)
-                kernel_pkg=$(pacman -Qqo "/lib/modules/${kver}" 2>/dev/null | grep -v -- '-headers' | head -n1)
-
-                if [[ -z "${kernel_pkg}" ]]; then
-                    for candidate in linux linux-lts linux-zen linux-hardened; do
-                        if pacman -Qq "${candidate}" &>/dev/null; then
-                            kernel_pkg="${candidate}"
-                            break
-                        fi
-                    done
+                if pacman -Qq linux &>/dev/null; then
+                    zfs_pkg="zfs-linux"
+                elif pacman -Qq linux-lts &>/dev/null; then
+                    zfs_pkg="zfs-linux-lts"
+                elif pacman -Qq linux-zen &>/dev/null; then
+                    zfs_pkg="zfs-linux-zen"
+                elif pacman -Qq linux-hardened &>/dev/null; then
+                    zfs_pkg="zfs-linux-hardened"
+                else
+                    # Fallback: attempt DKMS build for custom kernel
+                    log_warn "No prebuilt ZFS package for running kernel (${live_kernel})"
+                    log_warn "Attempting DKMS build – this may fail if headers are missing"
+                    pkgs+=(zfs-dkms linux-headers-${live_kernel})
                 fi
 
-                if [[ -n "${kernel_pkg}" ]]; then
-                    headers_pkg="${kernel_pkg}-headers"
-                else
-                    headers_pkg="linux-headers-${kver}"
-                fi
-
-                if pacman -Si "${headers_pkg}" &>/dev/null; then
-                    pkgs+=("${headers_pkg}")
-                else
-                    die "Cannot find kernel headers package for running kernel (${kver}). Tried: ${headers_pkg}"
+                if [[ -n "${zfs_pkg}" ]]; then
+                    pkgs+=("${zfs_pkg}")
                 fi
             fi
             ;;
@@ -104,6 +100,28 @@ EOF
             pacman -S --noconfirm --needed "${pkgs[@]}";
         log_info "Preflight dependencies installed.";
     fi;
+
+    if pacman -Qq zfs-dkms &>/dev/null && ! modprobe zfs 2>/dev/null; then
+        local kver
+        kver=$(uname -r)
+        log_info "Building ZFS DKMS module for kernel ${kver}..."
+
+        if ! dkms autoinstall; then
+            log_error "DKMS autoinstall failed."
+            local make_log
+            make_log=$(find /var/lib/dkms/zfs -name make.log 2>/dev/null | tail -n1)
+            if [[ -n "${make_log}" && -f "${make_log}" ]]; then
+                log_error "Last 20 lines of ${make_log}:"
+                tail -n 20 "${make_log}" | while IFS= read -r line; do log_error "  ${line}"; done
+            fi
+            die "Failed to build ZFS module for custom kernel ${kver}. Use linux or linux-lts for reliable ZFS support."
+        fi
+
+        if ! modprobe zfs 2>/dev/null; then
+            die "ZFS module still not loadable after DKMS build"
+        fi
+        log_info "ZFS module loaded successfully."
+    fi
 
     if [[ "${fs_type}" == 'bcachefs' ]]; then
         local bcachefs_ver kernel_ver
@@ -119,63 +137,5 @@ EOF
         fi
     fi
     
-    if [[ "${fs_type}" == 'zfs' ]]; then
-        local kver
-        kver=$(uname -r)
-
-        if ! modprobe zfs 2>/dev/null; then
-            log_info "Building ZFS module for kernel ${kver}..."
-
-            if ! pacman -Qq gcc make perl dkms >/dev/null 2>&1; then
-                log_info "Installing ZFS build dependencies..."
-                pacman -S --needed --noconfirm gcc make perl dkms
-            fi
-
-            if ! dkms status | grep -q '^zfs/'; then
-                local zfs_version
-                zfs_version="$(basename /usr/src/zfs-* 2>/dev/null | sed 's/^zfs-//')"
-
-                [[ -n "${zfs_version}" ]] || die "failed to detect ZFS DKMS source version"
-
-                log_info "Registering ZFS DKMS module version ${zfs_version}..."
-                dkms add -m zfs -v "${zfs_version}" || die "failed to register ZFS DKMS module"
-            fi
-
-            if ! dkms autoinstall; then
-                log_error "DKMS autoinstall failed."
-            fi
-
-            local waited=0
-            while dkms status 2>/dev/null | grep -q 'zfs.*: added'; do
-                sleep 2
-                waited=$((waited + 2))
-
-                if [[ ${waited} -ge 120 ]]; then
-                    log_error "DKMS build timed out."
-                    break
-                fi
-            done
-
-            if modprobe zfs 2>/dev/null; then
-                log_info "ZFS kernel module loaded successfully."
-            else
-                log_error "ZFS kernel module still unavailable."
-                log_error "DKMS status:"
-                dkms status 2>&1 | while IFS= read -r line; do log_error "  ${line}"; done
-                local make_log
-                make_log=$(find /var/lib/dkms/zfs -name make.log 2>/dev/null | tail -n1)
-                if [[ -n "${make_log}" && -f "${make_log}" ]]; then
-                    log_error "Last 20 lines of ${make_log}:"
-                    tail -n 20 "${make_log}" | while IFS= read -r line; do log_error "  ${line}"; done
-                fi
-                log_error "Kernel ${kver} may be incompatible with the available zfs-dkms."
-                log_error "Use a live ISO with a standard kernel (linux or linux-lts)."
-                return 1
-            fi
-        else
-            log_info "ZFS kernel module already loaded."
-        fi
-    fi
-
     stage_mark_done preflight;
 }

@@ -55,6 +55,10 @@ stage_chroot() {
             log_error "System will not boot correctly."
             return 1
         fi
+
+        log_info "Building ZFS DKMS module for target kernel..."
+        artix-chroot /mnt dkms autoinstall || die "DKMS autoinstall failed inside chroot"
+        artix-chroot /mnt modprobe zfs || die "Failed to load ZFS module in chroot"
     fi
 
     if ! configure_users; then

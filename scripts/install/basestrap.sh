@@ -49,14 +49,8 @@ install_base_system() {
     esac
 
     case "${kernel}" in
-        linux)
-            pkgs+=(linux linux-headers) ;;
-        linux-zen)
-            pkgs+=(linux-zen linux-zen-headers) ;;
-        linux-lts)
-            pkgs+=(linux-lts linux-lts-headers) ;;
-        linux-hardened)
-            pkgs+=(linux-hardened linux-hardened-headers) ;;
+        linux|linux-zen|linux-lts|linux-hardened)
+            pkgs+=("${KERNEL_PACKAGE}" "${KERNEL_HEADERS}") ;;
         linux-libre)
             log_info "Enabling linux-libre repository..."
             if ! grep -q '^\[libre\]' /etc/pacman.conf; then
