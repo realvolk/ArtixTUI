@@ -122,6 +122,7 @@ EOF
     if [[ "${fs_type}" == 'zfs' ]]; then
         local kver
         kver=$(uname -r)
+
         if ! modprobe zfs 2>/dev/null; then
             log_info "Building ZFS module for kernel ${kver}..."
 
@@ -130,9 +131,17 @@ EOF
                 pacman -S --needed --noconfirm gcc make perl dkms
             fi
 
-            if ! dkms autoinstall 2>&1 | while IFS= read -r line; do
-                log_info "DKMS: ${line}"
-            done; then
+            if ! dkms status | grep -q '^zfs/'; then
+                local zfs_version
+                zfs_version="$(basename /usr/src/zfs-* 2>/dev/null | sed 's/^zfs-//')"
+
+                [[ -n "${zfs_version}" ]] || die "failed to detect ZFS DKMS source version"
+
+                log_info "Registering ZFS DKMS module version ${zfs_version}..."
+                dkms add -m zfs -v "${zfs_version}" || die "failed to register ZFS DKMS module"
+            fi
+
+            if ! dkms autoinstall; then
                 log_error "DKMS autoinstall failed."
             fi
 
@@ -140,6 +149,7 @@ EOF
             while dkms status 2>/dev/null | grep -q 'zfs.*: added'; do
                 sleep 2
                 waited=$((waited + 2))
+
                 if [[ ${waited} -ge 120 ]]; then
                     log_error "DKMS build timed out."
                     break
