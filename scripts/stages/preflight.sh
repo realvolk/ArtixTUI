@@ -113,6 +113,10 @@ EOF
         gum spin --spinner dot --title "Preflight – installing dependencies" -- \
             pacman -S --noconfirm --needed "${pkgs[@]}";
         log_info "Preflight dependencies installed.";
+        # Pacman likes to randomly fail it seems.. temporary fix until I figure out what's wrong
+        for pkg in "${pkgs[@]}"; do
+            pacman -Q "${pkg}" &>/dev/null || die "Failed to install ${pkg}"
+        done
     fi;
 
     if [[ "${fs_type}" == 'zfs' ]]; then
