@@ -33,10 +33,13 @@ mount_filesystems() {
     esac
     command -v mount >/dev/null || die 'mount unavailable (util-linux missing)'
     modprobe vfat 2>/dev/null || die 'vfat kernel module unavailable'
+    if mountpoint -q /mnt && mountpoint -q /mnt/boot/efi; then
+        log_info "Filesystems already mounted, skipping remount."
+        return 0
+    fi
     umount -R /mnt/boot/efi 2>/dev/null || true
     umount -R /mnt 2>/dev/null || true
     mkdir -p /mnt
-
     log_info "Mounting root filesystem..."
     case "${fs_type}" in
         btrfs)

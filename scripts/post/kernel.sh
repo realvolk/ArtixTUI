@@ -11,8 +11,10 @@ install_kernel_bazzite() {
     }
     useradd -m builduser 2>/dev/null || true
     chown -R builduser:builduser "${build_dir}"
-    su builduser -c "cd '${build_dir}' && makepkg -s --noconfirm --needed --skippgpcheck" || {
+    su builduser -c "cd '${build_dir}' && makepkg -s --noconfirm --needed --skippgpcheck" &>/tmp/bazzite-build.log || {
         log_error "Failed to build linux-bazzite-bin."
+        log_error "Last 20 lines of build log:"
+        tail -20 /tmp/bazzite-build.log 2>/dev/null | while IFS= read -r line; do log_error "  ${line}"; done
         return 1
     }
     pacman -U --noconfirm "${build_dir}"/*.pkg.tar.* || {
