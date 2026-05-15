@@ -56,9 +56,12 @@ stage_chroot() {
             return 1
         fi
 
-        log_info "Building ZFS DKMS module for target kernel..."
-        artix-chroot /mnt dkms autoinstall || die "DKMS autoinstall failed inside chroot"
-        artix-chroot /mnt modprobe zfs || die "Failed to load ZFS module in chroot"
+        if ! artix-chroot /mnt modprobe zfs; then
+            log_error "Failed to load ZFS module inside chroot."
+            return 1
+        fi
+
+        log_info "ZFS environment validation successful."
     fi
 
     if ! configure_users; then

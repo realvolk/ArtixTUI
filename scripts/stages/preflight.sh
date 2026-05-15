@@ -39,7 +39,10 @@ stage_preflight() {
 
     local pkgs=();
     local fs_type;
+    local target_kernel;
+    local live_kernel_pkg="";
     fs_type="$(state_get FS_TYPE ext4)";
+    target_kernel="$(state_get KERNEL_CHOICE linux)";
 
     command_exists sgdisk       || pkgs+=(gptfdisk);
     command_exists partprobe    || pkgs+=(parted);
@@ -49,48 +52,59 @@ stage_preflight() {
     command_exists lsblk        || pkgs+=(util-linux);
     command_exists wipefs       || pkgs+=(util-linux);
     command_exists btrfs        || pkgs+=(btrfs-progs);
+
+    case "$(uname -r)" in
+        *lts*)       live_kernel_pkg="linux-lts" ;;
+        *zen*)       live_kernel_pkg="linux-zen" ;;
+        *hardened*)  live_kernel_pkg="linux-hardened" ;;
+        *)           live_kernel_pkg="linux" ;;
+    esac
+
     case "${fs_type}" in
-        xfs)     command_exists mkfs.xfs || pkgs+=(xfsprogs) ;;
-        f2fs)    command_exists mkfs.f2fs || pkgs+=(f2fs-tools) ;;
-        exfat)   command_exists mkfs.exfat || pkgs+=(exfatprogs) ;;
+        xfs)      command_exists mkfs.xfs || pkgs+=(xfsprogs) ;;
+        f2fs)     command_exists mkfs.f2fs || pkgs+=(f2fs-tools) ;;
+        exfat)    command_exists mkfs.exfat || pkgs+=(exfatprogs) ;;
         bcachefs) command_exists mkfs.bcachefs || pkgs+=(bcachefs-tools) ;;
+
         zfs)
-            if ! command_exists zpool || ! modprobe zfs 2>/dev/null; then
-                if ! grep -q '^\[archzfs\]' /etc/pacman.conf; then
-                    pacman-key --recv-keys F75D9D76 --keyserver hkp://keyserver.ubuntu.com
-                    pacman-key --lsign-key F75D9D76
-                    cat <<'EOF' >> /etc/pacman.conf
+            if [[ "${target_kernel}" != "linux" &&
+                  "${target_kernel}" != "linux-lts" &&
+                  "${target_kernel}" != "linux-zen" &&
+                  "${target_kernel}" != "linux-hardened" ]]; then
+                die "ZFS is only supported with linux, linux-lts, linux-zen, or linux-hardened kernels."
+            fi
+
+            if [[ "${target_kernel}" != "${live_kernel_pkg}" ]]; then
+                die "Live ISO kernel (${live_kernel_pkg}) does not match target kernel (${target_kernel}) for ZFS installation."
+            fi
+
+            if ! grep -q '^\[archzfs\]' /etc/pacman.conf; then
+                pacman-key --recv-keys F75D9D76 --keyserver hkp://keyserver.ubuntu.com
+                pacman-key --lsign-key F75D9D76
+
+                cat <<'EOF' >> /etc/pacman.conf
 
 [archzfs]
 Server = https://archzfs.com/$repo/x86_64
 EOF
-                    pacman -Sy --noconfirm
-                    pacman -Sl archzfs >/dev/null 2>&1 || die "archzfs repository unusable"
-                fi
 
-                local live_kernel
-                live_kernel=$(uname -r)
-                local zfs_pkg=""
-
-                if pacman -Qq linux &>/dev/null; then
-                    zfs_pkg="zfs-linux"
-                elif pacman -Qq linux-lts &>/dev/null; then
-                    zfs_pkg="zfs-linux-lts"
-                elif pacman -Qq linux-zen &>/dev/null; then
-                    zfs_pkg="zfs-linux-zen"
-                elif pacman -Qq linux-hardened &>/dev/null; then
-                    zfs_pkg="zfs-linux-hardened"
-                else
-                    # Fallback: attempt DKMS build for custom kernel
-                    log_warn "No prebuilt ZFS package for running kernel (${live_kernel})"
-                    log_warn "Attempting DKMS build – this may fail if headers are missing"
-                    pkgs+=(zfs-dkms linux-headers-${live_kernel})
-                fi
-
-                if [[ -n "${zfs_pkg}" ]]; then
-                    pkgs+=("${zfs_pkg}")
-                fi
+                pacman -Sy --noconfirm
+                pacman -Sl archzfs >/dev/null 2>&1 || die "archzfs repository unusable"
             fi
+
+            local zfs_pkg=""
+
+            case "${target_kernel}" in
+                linux)           zfs_pkg="zfs-linux" ;;
+                linux-lts)       zfs_pkg="zfs-linux-lts" ;;
+                linux-zen)       zfs_pkg="zfs-linux-zen" ;;
+                linux-hardened)  zfs_pkg="zfs-linux-hardened" ;;
+            esac
+
+            if [[ -n "${zfs_pkg}" ]]; then
+                pkgs+=("${zfs_pkg}")
+            fi
+
             ;;
     esac
 
@@ -101,26 +115,12 @@ EOF
         log_info "Preflight dependencies installed.";
     fi;
 
-    if pacman -Qq zfs-dkms &>/dev/null && ! modprobe zfs 2>/dev/null; then
-        local kver
-        kver=$(uname -r)
-        log_info "Building ZFS DKMS module for kernel ${kver}..."
-
-        if ! dkms autoinstall; then
-            log_error "DKMS autoinstall failed."
-            local make_log
-            make_log=$(find /var/lib/dkms/zfs -name make.log 2>/dev/null | tail -n1)
-            if [[ -n "${make_log}" && -f "${make_log}" ]]; then
-                log_error "Last 20 lines of ${make_log}:"
-                tail -n 20 "${make_log}" | while IFS= read -r line; do log_error "  ${line}"; done
-            fi
-            die "Failed to build ZFS module for custom kernel ${kver}. Use linux or linux-lts for reliable ZFS support."
-        fi
-
+    if [[ "${fs_type}" == 'zfs' ]]; then
         if ! modprobe zfs 2>/dev/null; then
-            die "ZFS module still not loadable after DKMS build"
+            die "Failed to load ZFS kernel module."
         fi
-        log_info "ZFS module loaded successfully."
+
+        log_info "ZFS kernel module loaded successfully."
     fi
 
     if [[ "${fs_type}" == 'bcachefs' ]]; then

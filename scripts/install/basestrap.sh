@@ -154,7 +154,7 @@ EOF
             fi
             pacman-key --recv-keys F75D9D76 --keyserver hkp://keyserver.ubuntu.com
             pacman-key --lsign-key F75D9D76
-            pacman -S --noconfirm --needed dkms zfs-dkms zfs-utils zfs-initramfs
+            pkgs+=(dkms zfs-dkms zfs-utils zfs-initramfs)
             log_warn "ZFS support is experimental. DKMS rebuilds may be required."
             ;;
         *) die "unsupported filesystem: ${fs_type}" ;;
