@@ -125,6 +125,11 @@ EOF
         if ! modprobe zfs 2>/dev/null; then
             log_info "Building ZFS module for kernel ${kver}..."
 
+            if ! pacman -Qq gcc make perl dkms >/dev/null 2>&1; then
+                log_info "Installing ZFS build dependencies..."
+                pacman -S --needed --noconfirm gcc make perl dkms
+            fi
+
             if ! dkms autoinstall 2>&1 | while IFS= read -r line; do
                 log_info "DKMS: ${line}"
             done; then
