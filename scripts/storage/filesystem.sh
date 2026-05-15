@@ -86,15 +86,14 @@ create_filesystems() {
         xfs)
             log_info "Creating XFS filesystem (GRUB-compatible)..."
             local xfs_config="/usr/share/xfsprogs/mkfs/lts_6.6.conf"
-
+            
             if [[ -f "${xfs_config}" ]]; then
-                mkfs.xfs -f -c options="${xfs_config}" "${root_part}"
+                mkfs.xfs -f -c "options=${xfs_config}" -m bigtime=0 "${root_part}"
             else
-                mkfs.xfs -f "${root_part}"
+                mkfs.xfs -f -m bigtime=0 "${root_part}"
                 log_warn "XFS LTS config not found – using upstream defaults. GRUB may fail if features are incompatible."
             fi
             ;;
-
         f2fs)
             log_info "Creating F2FS filesystem..."
 
