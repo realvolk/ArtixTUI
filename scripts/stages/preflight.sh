@@ -43,8 +43,9 @@ stage_preflight() {
 
     command_exists sgdisk       || pkgs+=(gptfdisk);
     command_exists cryptsetup   || pkgs+=(cryptsetup);
+    command_exists mount        || pkgs+=(util-linux);
+    command_exists mount.vfat   || pkgs+=(util-linux);
     command_exists mkfs.fat     || pkgs+=(dosfstools);
-    command_exists mount.vfat   || pkgs+=(dosfstools);
     command_exists lsblk        || pkgs+=(util-linux);
     command_exists wipefs       || pkgs+=(util-linux);
     command_exists btrfs        || pkgs+=(btrfs-progs);

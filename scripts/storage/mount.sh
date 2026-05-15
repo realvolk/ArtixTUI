@@ -32,7 +32,7 @@ mount_filesystems() {
         exfat) modprobe exfat 2>/dev/null || true ;;
     esac
     modprobe vfat 2>/dev/null || true
-    command -v mount.vfat >/dev/null || die 'mount.vfat unavailable (dosfstools missing)'
+    command -v mount.vfat >/dev/null || die 'mount.vfat unavailable (util-linux/vfat support missing)'
     umount -R /mnt/boot/efi 2>/dev/null || true
     umount -R /mnt 2>/dev/null || true
     mkdir -p /mnt
