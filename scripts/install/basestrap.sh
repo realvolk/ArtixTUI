@@ -209,6 +209,34 @@ EOF
         pacman -S --noconfirm --needed archlinux-keyring
     fi
 
+    mkdir -p /mnt/etc/pacman.d
+    case "${kernel}" in
+        linux-cachyos-bore)
+            cp /etc/pacman.d/cachyos-mirrorlist /mnt/etc/pacman.d/ 2>/dev/null || true
+            cat > /mnt/etc/pacman.conf <<'EOF'
+[cachyos]
+Include = /etc/pacman.d/cachyos-mirrorlist
+EOF
+            ;;
+        linux-bazzite-bin)
+            cp /etc/pacman.d/mirrorlist-arch /mnt/etc/pacman.d/ 2>/dev/null || true
+            cat > /mnt/etc/pacman.conf <<'EOF'
+[extra]
+Include = /etc/pacman.d/mirrorlist-arch
+
+[multilib]
+Include = /etc/pacman.d/mirrorlist-arch
+EOF
+            ;;
+        xanmod)
+            cp /etc/pacman.d/chaotic-mirrorlist /mnt/etc/pacman.d/ 2>/dev/null || true
+            cat > /mnt/etc/pacman.conf <<'EOF'
+[chaotic-aur]
+Include = /etc/pacman.d/chaotic-mirrorlist
+EOF
+            ;;
+    esac
+
     log_info "Starting basestrap..."
     printf '%s\n' "${pkgs[@]}" >> "${debug_log}"
     if ! basestrap /mnt "${pkgs[@]}" \
@@ -220,42 +248,6 @@ EOF
     fi
     [[ -x /mnt/bin/bash ]] || die "/mnt/bin/bash missing after basestrap"
     [[ -f /mnt/etc/os-release ]] || die "target root invalid after basestrap"
-
-    case "${kernel}" in
-        linux-cachyos-bore)
-            if ! grep -q '^\[cachyos\]' /mnt/etc/pacman.conf 2>/dev/null; then
-                mkdir -p /mnt/etc/pacman.d
-                cp /etc/pacman.d/cachyos-mirrorlist /mnt/etc/pacman.d/ 2>/dev/null || true
-                cat <<'EOF' >> /mnt/etc/pacman.conf
-[cachyos]
-Include = /etc/pacman.d/cachyos-mirrorlist
-EOF
-            fi
-            ;;
-        linux-bazzite-bin)
-            if ! grep -q '^\[extra\]' /mnt/etc/pacman.conf 2>/dev/null; then
-                mkdir -p /mnt/etc/pacman.d
-                cp /etc/pacman.d/mirrorlist-arch /mnt/etc/pacman.d/ 2>/dev/null || true
-                cat <<'EOF' >> /mnt/etc/pacman.conf
-[extra]
-Include = /etc/pacman.d/mirrorlist-arch
-
-[multilib]
-Include = /etc/pacman.d/mirrorlist-arch
-EOF
-            fi
-            ;;
-        xanmod)
-            if ! grep -q '^\[chaotic-aur\]' /mnt/etc/pacman.conf 2>/dev/null; then
-                mkdir -p /mnt/etc/pacman.d
-                cp /etc/pacman.d/chaotic-mirrorlist /mnt/etc/pacman.d/ 2>/dev/null || true
-                cat <<'EOF' >> /mnt/etc/pacman.conf
-[chaotic-aur]
-Include = /etc/pacman.d/chaotic-mirrorlist
-EOF
-            fi
-            ;;
-    esac
 
     log_info "Configuring locale..."
     artix-chroot /mnt /bin/bash -c "

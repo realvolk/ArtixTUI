@@ -150,6 +150,7 @@ start_auto_install() {
         clear; printf '[*] Installation cancelled.\n'; exit 0
     fi
     state_save
+    rm -f /tmp/artix-installer/stages/*.done 2>/dev/null || true
     run_install_pipeline
 }
 
