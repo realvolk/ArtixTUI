@@ -115,6 +115,7 @@ EOF
         log_info "Preflight dependencies installed.";
     fi;
 
+    if [[ "${fs_type}" == 'zfs' ]]; then
         log_info "Kernel: $(uname -r)"
         log_info "Installed ZFS packages:"
         pacman -Q | grep '^zfs' || true
@@ -122,8 +123,15 @@ EOF
         find /usr/lib/modules -iname 'zfs.ko*' 2>/dev/null || true
         depmod -a
 
-    if [[ "${fs_type}" == 'zfs' ]]; then
         if ! modprobe zfs 2>/dev/null; then
+            local expected_kver
+            expected_kver=$(pacman -Qi "${zfs_pkg}" 2>/dev/null | grep -oP 'for kernel \K[\d.]+' || true)
+
+            if [[ -n "${expected_kver}" ]]; then
+                log_error "Prebuilt ZFS module (${zfs_pkg}) is for kernel ${expected_kver}, but running kernel is $(uname -r)."
+                die "Kernel version mismatch. The archzfs repo has not yet built ZFS for this kernel. Wait for an update or use a different live ISO."
+            fi
+
             die "Failed to load ZFS kernel module."
         fi
 

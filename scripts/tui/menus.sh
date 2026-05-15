@@ -21,8 +21,22 @@ tui_select_init() {
 
 tui_select_filesystem() {
     local fs
-    fs=$(tui_menu "Filesystem" "Select filesystem:" \
-        "ext4" "btrfs" "xfs" "f2fs" "bcachefs" "exfat" "zfs") || return 1
+    local fs_options=("ext4" "btrfs" "xfs" "f2fs" "bcachefs" "exfat")
+
+    local live_kernel_pkg=""
+    case "$(uname -r)" in
+        *lts*)       live_kernel_pkg="linux-lts" ;;
+        *zen*)       live_kernel_pkg="linux-zen" ;;
+        *hardened*)  live_kernel_pkg="linux-hardened" ;;
+        *)           live_kernel_pkg="linux" ;;
+    esac
+
+    if grep -q '^\[archzfs\]' /etc/pacman.conf 2>/dev/null \
+        && pacman -Sl archzfs 2>/dev/null | grep -q "zfs-${live_kernel_pkg} "; then
+        fs_options+=("zfs")
+    fi
+
+    fs=$(tui_menu "Filesystem" "Select filesystem:" "${fs_options[@]}") || return 1
 
     if [[ "${fs}" == "zfs" ]]; then
         tui_msg_quick "ZFS Selected" "ZFS requires additional setup. Experimental fixes applied since v7.1.0.0!"
