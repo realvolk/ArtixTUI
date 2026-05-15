@@ -36,6 +36,16 @@ configure_bootloader() {
         refind)
             log_info "Installing rEFInd..."
             findmnt -rn -o FSTYPE /mnt/boot/efi | grep -qx 'vfat' || die 'EFI partition not mounted as vfat'
+            local refind_root_param
+            if [[ -n "${root_param}" ]]; then
+                refind_root_param="${root_param}"
+            else
+                local refind_root_device refind_root_uuid
+                refind_root_device=$(findmnt -n -o SOURCE --target /mnt)
+                refind_root_uuid=$(blkid -s UUID -o value "${refind_root_device}")
+                refind_root_param="root=UUID=${refind_root_uuid}"
+            fi
+            artix-chroot /mnt bash -c "echo \"${refind_root_param} rw\" > /boot/refind_linux.conf"
             artix-chroot /mnt refind-install || die 'refind-install failed'
             ;;
         efistub)
