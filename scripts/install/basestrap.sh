@@ -60,7 +60,7 @@ SigLevel = Never
 Server = https://repo.parabola.nu/libre/os/x86_64
 EOF
             fi
-            pacman -S --noconfirm --needed linux-libre linux-libre-headers
+            pkgs+=(linux-libre linux-libre-headers)
             log_warn "linux-libre removes non-free firmware/drivers. NVIDIA, Wi‑Fi, Bluetooth may stop working."
             ;;
         linux-cachyos-bore)
@@ -78,7 +78,7 @@ EOF
 Include = /etc/pacman.d/cachyos-mirrorlist
 EOF
             fi
-            pacman -S --noconfirm --needed linux-cachyos-bore linux-cachyos-bore-headers
+            pkgs+=(linux-cachyos-bore linux-cachyos-bore-headers)
             ;;
         linux-bazzite-bin)
             log_info "Setting up Arch repositories for Bazzite kernel..."
@@ -104,7 +104,7 @@ EOF
 Include = /etc/pacman.d/mirrorlist-arch
 EOF
             fi
-            pacman -S --noconfirm --needed linux-bazzite-bin linux-bazzite-bin-headers
+            pkgs+=(linux-bazzite-bin linux-bazzite-bin-headers)
             ;;
         xanmod)
             log_info "Setting up Chaotic-AUR for XanMod..."
@@ -119,7 +119,7 @@ EOF
 Include = /etc/pacman.d/chaotic-mirrorlist
 EOF
             fi
-            pacman -S --noconfirm --needed "${KERNEL_PACKAGE}" "${KERNEL_HEADERS}"
+            pkgs+=("${KERNEL_PACKAGE}" "${KERNEL_HEADERS}")
             ;;
         tkg)
             log_info "Setting up TKG build dependencies..."
