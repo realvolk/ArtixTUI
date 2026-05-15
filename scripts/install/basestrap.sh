@@ -91,6 +91,13 @@ EOF
             if ! pacman -Q artix-archlinux-support >/dev/null 2>&1; then
                 pacman -S --noconfirm --needed artix-archlinux-support
             fi
+            local arch_mirrorlist='/etc/pacman.d/mirrorlist-arch'
+            if [[ ! -f "${arch_mirrorlist}" ]]; then
+                install -Dm644 /dev/null "${arch_mirrorlist}"
+                cat > "${arch_mirrorlist}" <<'MIRROR_EOF'
+Server = https://geo.mirror.pkgbuild.com/$repo/os/$arch
+MIRROR_EOF
+            fi
             if ! grep -q '^\[extra\]' /etc/pacman.conf; then
                 cat <<'EOF' >> /etc/pacman.conf
 [extra]
@@ -170,6 +177,9 @@ EOF
     local debug_log="${PWD}/basestrap-debug.log"
     : > "${debug_log}"
 
+    export GNUPGHOME="${GNUPGHOME:-/etc/pacman.d/gnupg}"
+    mkdir -p "${GNUPGHOME}"
+    chmod 700 "${GNUPGHOME}"
     log_info "Initializing Artix keyring..."
     pacman-key --init
     pacman-key --populate artix
@@ -177,6 +187,13 @@ EOF
     if [[ "$(state_get ENABLE_ARCH_REPOS no)" == 'yes' ]]; then
         log_info "Installing Arch repository support..."
         pacman -S --noconfirm --needed artix-archlinux-support
+        local arch_mirrorlist='/etc/pacman.d/mirrorlist-arch'
+        if [[ ! -f "${arch_mirrorlist}" ]]; then
+            install -Dm644 /dev/null "${arch_mirrorlist}"
+            cat > "${arch_mirrorlist}" <<'MIRROR_EOF'
+Server = https://geo.mirror.pkgbuild.com/$repo/os/$arch
+MIRROR_EOF
+        fi
 
         if ! grep -q '^\[extra\]' /etc/pacman.conf; then
             cat <<'EOF' >> /etc/pacman.conf
@@ -191,15 +208,24 @@ Include = /etc/pacman.d/mirrorlist-arch
 EOF
         fi
         log_info "Synchronizing package databases..."
-        pacman -Sy --noconfirm
+        if ! pacman -Sy --noconfirm; then
+            die "Failed to sync package databases — check mirrorlist configuration"
+        fi
         log_info "Installing Arch Linux keyring..."
         pacman -S --noconfirm --needed archlinux-keyring
     fi
 
     log_info "Starting basestrap..."
     printf '%s\n' "${pkgs[@]}" >> "${debug_log}"
-    basestrap /mnt "${pkgs[@]}" 2>&1 | tee -a "${debug_log}" | while IFS= read -r line; do log_info "${line}"; done
-
+    if ! basestrap /mnt "${pkgs[@]}" \
+        2>&1 | tee -a "${debug_log}" \
+        | while IFS= read -r line; do
+            log_info "${line}"
+        done; then
+        die "basestrap failed"
+    fi
+    [[ -x /mnt/bin/bash ]] || die "/mnt/bin/bash missing after basestrap"
+    [[ -f /mnt/etc/os-release ]] || die "target root invalid after basestrap"
     log_info "Configuring locale..."
     artix-chroot /mnt /bin/bash -c "
         grep -q '^${locale} UTF-8' /etc/locale.gen || echo '${locale} UTF-8' >> /etc/locale.gen

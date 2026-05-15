@@ -32,6 +32,10 @@ mount_filesystems() {
         exfat) modprobe exfat 2>/dev/null || true ;;
     esac
     modprobe vfat 2>/dev/null || true
+    command -v mount.vfat >/dev/null || die 'mount.vfat unavailable (dosfstools missing)'
+    umount -R /mnt/boot/efi 2>/dev/null || true
+    umount -R /mnt 2>/dev/null || true
+    mkdir -p /mnt
 
     log_info "Mounting root filesystem..."
     case "${fs_type}" in
@@ -103,7 +107,11 @@ mount_filesystems() {
             die "unsupported filesystem: ${fs_type}"
             ;;
     esac
+    local efi_fs
+    efi_fs="$(blkid -o value -s TYPE "${efi_part}" 2>/dev/null || true)"
 
+    [[ "${efi_fs}" == "vfat" ]] || \
+        die "EFI partition is not vfat (detected: ${efi_fs:-unknown})"
     log_info "Mounting EFI partition..."
     mount -t vfat --mkdir "${efi_part}" "${efi_mount}"
     mountpoint -q "${efi_mount}" || die 'failed to mount EFI partition'

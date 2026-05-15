@@ -10,6 +10,12 @@ stage_preflight() {
     require_efi;
     require_internet;
 
+    local pacman_conf_backup='/tmp/pacman.conf.artixtui.bak'
+
+    if [[ ! -f "${pacman_conf_backup}" ]]; then
+        cp /etc/pacman.conf "${pacman_conf_backup}"
+    fi
+
     if ! command_exists gum; then
         if [[ -f "/usr/local/bin/gum" ]]; then
             PATH="/usr/local/bin:${PATH}"   
@@ -58,6 +64,7 @@ stage_preflight() {
 Server = https://archzfs.com/$repo/x86_64
 EOF
                     pacman -Sy --noconfirm
+                    pacman -Sl archzfs >/dev/null 2>&1 || die "archzfs repository unusable"
                 fi
 
                 pkgs+=(zfs-utils dkms zfs-dkms)
@@ -116,7 +123,12 @@ EOF
         kver=$(uname -r)
         if ! modprobe zfs 2>/dev/null; then
             log_info "Building ZFS module for kernel ${kver}..."
-            dkms autoinstall 2>&1 | while IFS= read -r line; do log_info "DKMS: ${line}"; done || true
+
+            if ! dkms autoinstall 2>&1 | while IFS= read -r line; do
+                log_info "DKMS: ${line}"
+            done; then
+                log_error "DKMS autoinstall failed."
+            fi
 
             local waited=0
             while dkms status 2>/dev/null | grep -q 'zfs.*: added'; do

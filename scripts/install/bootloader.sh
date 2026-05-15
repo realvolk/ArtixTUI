@@ -21,8 +21,8 @@ configure_bootloader() {
 
             if [[ "${fs_type}" == "xfs" ]]; then
                 log_info "Verifying XFS features for GRUB compatibility..."
-                if artix-chroot /mnt xfs_db -r -c "version" "${root_device}" 2>/dev/null | grep -qE 'bigtime|inobtcount|reflink'; then
-                    die "XFS features on ${root_device} are too new for GRUB. Reformat with lts_6.6.conf or use rEFInd."
+                if artix-chroot /mnt xfs_info "${root_device}" 2>/dev/null | grep -q 'bigtime=1'; then
+                    die "XFS bigtime is enabled and may be incompatible with older GRUB builds."
                 fi
             fi
 
@@ -42,7 +42,7 @@ configure_bootloader() {
             log_info "Configuring EFIStub boot entry..."
             command -v efibootmgr >/dev/null 2>&1 || die 'efibootmgr unavailable'
             local root_source root_uuid esp_source esp_mount esp_disk esp_part
-            root_source="$(findmnt -rn -o SOURCE /mnt)"
+            root_source="$(findmnt -rn -o SOURCE --target /mnt)"
             [[ -n "${root_source}" ]] || die 'failed to detect root partition'
             [[ -b "${root_source}" ]] || die 'invalid root block device'
             root_uuid="$(blkid -s UUID -o value "${root_source}")"
@@ -81,11 +81,17 @@ configure_bootloader() {
 
             local loader="\\EFI\\Artix\\${kernel_basename}"
             local cmdline
+
             if [[ "${fs_type}" == 'zfs' ]]; then
-                cmdline="root=ZFS=zroot/root rw ${microcode_image_str} initrd=\\EFI\\Artix\\${initramfs_basename}"
+                cmdline="root=ZFS=zroot/root rw"
             else
-                cmdline="root=UUID=${root_uuid} rw ${microcode_image_str} initrd=\\EFI\\Artix\\${initramfs_basename}"
+                cmdline="root=UUID=${root_uuid} rw"
             fi
+
+            [[ -n "${microcode_image_str:-}" ]] && \
+                cmdline+=" ${microcode_image_str}"
+
+            cmdline+=" initrd=\\EFI\\Artix\\${initramfs_basename}"
 
             log_info "Creating EFI boot entry..."
             artix-chroot /mnt efibootmgr --create --disk "${esp_disk}" --part "${esp_part}" \
