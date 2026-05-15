@@ -6,6 +6,7 @@ detect_kernel_package() {
 
     KERNEL_PACKAGE='';
     KERNEL_HEADERS='';
+    KERNEL_AUR='false';
 
     case "${kernel}" in
         linux)
@@ -39,8 +40,7 @@ detect_kernel_package() {
             ;;
 
         linux-bazzite-bin)
-            KERNEL_PACKAGE='linux-bazzite-bin';
-            KERNEL_HEADERS='linux-bazzite-bin-headers';
+            KERNEL_AUR='true';
             ;;
 
         xanmod)
@@ -79,9 +79,10 @@ detect_kernel_package() {
             ;;
     esac
 
-    [[ -n "${KERNEL_PACKAGE}" ]] \
-        || die 'failed to detect kernel package';
-
-    [[ -n "${KERNEL_HEADERS}" ]] \
-        || die 'failed to detect kernel headers';
+    if [[ "${KERNEL_AUR}" != 'true' ]]; then
+        [[ -n "${KERNEL_PACKAGE}" ]] \
+            || die 'failed to detect kernel package';
+        [[ -n "${KERNEL_HEADERS}" ]] \
+            || die 'failed to detect kernel headers';
+    fi
 }

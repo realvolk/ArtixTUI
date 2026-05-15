@@ -49,10 +49,16 @@ source ./scripts/post/networking.sh
 source ./scripts/post/desktop.sh
 source ./scripts/post/audio.sh
 source ./scripts/post/extras.sh
+source ./scripts/post/kernel.sh
 
 log_info() {
     printf '\e[1;34m[*] %s\e[0m\n' "\$*" | tee -a /var/log/artix-installer.log
 }
+
+if [[ "${KERNEL_CHOICE}" == 'linux-bazzite-bin' ]]; then
+    log_info "Building Bazzite kernel..."
+    install_kernel_bazzite
+fi
 
 log_info "Configuring networking..."
 setup_networking

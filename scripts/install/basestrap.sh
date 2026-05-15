@@ -81,7 +81,7 @@ EOF
             pkgs+=(linux-cachyos-bore linux-cachyos-bore-headers)
             ;;
         linux-bazzite-bin)
-            log_info "Setting up Arch repositories for Bazzite kernel..."
+            log_info "Setting up Bazzite kernel AUR build..."
             if ! pacman -Q artix-archlinux-support >/dev/null 2>&1; then
                 pacman -S --noconfirm --needed artix-archlinux-support
             fi
@@ -104,7 +104,7 @@ EOF
 Include = /etc/pacman.d/mirrorlist-arch
 EOF
             fi
-            pkgs+=(linux-bazzite-bin linux-bazzite-bin-headers)
+            pkgs+=(base-devel git rpm2cpio cpio)
             ;;
         xanmod)
             log_info "Setting up Chaotic-AUR for XanMod..."
