@@ -42,13 +42,14 @@ stage_preflight() {
     fs_type="$(state_get FS_TYPE ext4)";
 
     command_exists sgdisk       || pkgs+=(gptfdisk);
+    command_exists partprobe    || pkgs+=(parted);
     command_exists cryptsetup   || pkgs+=(cryptsetup);
     command_exists mount        || pkgs+=(util-linux);
     command_exists mkfs.fat     || pkgs+=(dosfstools);
     command_exists lsblk        || pkgs+=(util-linux);
     command_exists wipefs       || pkgs+=(util-linux);
     command_exists btrfs        || pkgs+=(btrfs-progs);
-    command_exists mount.vfat   || pkgs+=(util-linux)
+    command_exists mount.vfat   || pkgs+=(util-linux);
     if ! command -v mount.vfat >/dev/null 2>&1; then
         pacman -S --noconfirm --overwrite='*' util-linux
     fi

@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Version-v7.1.1.3-blue?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/Version-v7.1.1.4-blue?style=flat-square" alt="Version">
   <img src="https://img.shields.io/badge/Language-Bash-4EAA25?style=flat-square&logo=gnu-bash" alt="Bash">
   <img src="https://img.shields.io/badge/TUI-gum-FFB6C1?style=flat-square" alt="gum">
   <img src="https://img.shields.io/badge/License-Volk Open License 1.0-yellow?style=flat-square" alt="License">
