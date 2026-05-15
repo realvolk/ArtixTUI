@@ -104,7 +104,7 @@ EOF
 Include = /etc/pacman.d/mirrorlist-arch
 EOF
             fi
-            pkgs+=(base-devel git rpm2cpio cpio)
+            pkgs+=(base-devel git)
             ;;
         xanmod)
             log_info "Setting up Chaotic-AUR for XanMod..."
