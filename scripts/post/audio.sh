@@ -4,9 +4,9 @@ setup_audio() {
     local audio_stack="${AUDIO_STACK:-pipewire}" pkgs=()
     case "${audio_stack}" in
         pipewire)
-            if pacman -Qq jack2 &>/dev/null; then
-                log_info "Replacing jack2 with pipewire-jack..."
-                pacman -Rdd --noconfirm jack2 || true
+            if pacman -Qq jack &>/dev/null || pacman -Qq jack2 &>/dev/null; then
+                log_info "Replacing jack/jack2 with pipewire-jack..."
+                pacman -Rdd --noconfirm jack jack2 2>/dev/null || true
             fi
             pkgs+=(pipewire pipewire-pulse pipewire-alsa pipewire-jack wireplumber alsa-utils pavucontrol rtkit) ;;
         pulseaudio)
