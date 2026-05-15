@@ -78,6 +78,14 @@ EOF
 Include = /etc/pacman.d/cachyos-mirrorlist
 EOF
             fi
+            if ! grep -q '^\[cachyos\]' /mnt/etc/pacman.conf 2>/dev/null; then
+                mkdir -p /mnt/etc/pacman.d
+                cp /etc/pacman.d/cachyos-mirrorlist /mnt/etc/pacman.d/ 2>/dev/null || true
+                cat <<'EOF' >> /mnt/etc/pacman.conf
+[cachyos]
+Include = /etc/pacman.d/cachyos-mirrorlist
+EOF
+            fi
             pkgs+=(linux-cachyos-bore linux-cachyos-bore-headers)
             ;;
         linux-bazzite-bin)
@@ -104,6 +112,20 @@ EOF
 Include = /etc/pacman.d/mirrorlist-arch
 EOF
             fi
+            if ! grep -q '^\[extra\]' /mnt/etc/pacman.conf 2>/dev/null; then
+                mkdir -p /mnt/etc/pacman.d
+                cp /etc/pacman.d/mirrorlist-arch /mnt/etc/pacman.d/ 2>/dev/null || true
+                cat <<'EOF' >> /mnt/etc/pacman.conf
+[extra]
+Include = /etc/pacman.d/mirrorlist-arch
+EOF
+            fi
+            if ! grep -q '^\[multilib\]' /mnt/etc/pacman.conf 2>/dev/null; then
+                cat <<'EOF' >> /mnt/etc/pacman.conf
+[multilib]
+Include = /etc/pacman.d/mirrorlist-arch
+EOF
+            fi
             pkgs+=(linux-bazzite-bin linux-bazzite-bin-headers)
             ;;
         xanmod)
@@ -115,6 +137,14 @@ EOF
             pacman -U --noconfirm 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst' 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst'
             if ! grep -q '^\[chaotic-aur\]' /etc/pacman.conf; then
                 cat <<'EOF' >> /etc/pacman.conf
+[chaotic-aur]
+Include = /etc/pacman.d/chaotic-mirrorlist
+EOF
+            fi
+            if ! grep -q '^\[chaotic-aur\]' /mnt/etc/pacman.conf 2>/dev/null; then
+                mkdir -p /mnt/etc/pacman.d
+                cp /etc/pacman.d/chaotic-mirrorlist /mnt/etc/pacman.d/ 2>/dev/null || true
+                cat <<'EOF' >> /mnt/etc/pacman.conf
 [chaotic-aur]
 Include = /etc/pacman.d/chaotic-mirrorlist
 EOF
