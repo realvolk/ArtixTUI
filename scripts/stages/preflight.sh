@@ -64,8 +64,32 @@ stage_preflight() {
         xfs)      command_exists mkfs.xfs || pkgs+=(xfsprogs) ;;
         f2fs)     command_exists mkfs.f2fs || pkgs+=(f2fs-tools) ;;
         exfat)    command_exists mkfs.exfat || pkgs+=(exfatprogs) ;;
-        bcachefs) command_exists mkfs.bcachefs || pkgs+=(bcachefs-tools) ;;
-
+        bcachefs)
+            if ! command_exists mkfs.bcachefs || ! modprobe bcachefs 2>/dev/null; then
+                if ! pacman -Q artix-archlinux-support &>/dev/null; then
+                    log_info "Installing archlinux-support for bcachefs..."
+                    pacman -S --noconfirm --needed artix-archlinux-support
+                fi
+                if ! grep -q '^\[extra\]' /etc/pacman.conf; then
+                    cat <<'EOF' >> /etc/pacman.conf
+[extra]
+Include = /etc/pacman.d/mirrorlist-arch
+EOF
+                    pacman -Sy --noconfirm
+                fi
+                pkgs+=(bcachefs-tools bcachefs-dkms)
+                # Detect kernel for headers
+                local kver kernel_pkg headers_pkg
+                kver=$(uname -r)
+                kernel_pkg=$(pacman -Qqo "/lib/modules/${kver}" 2>/dev/null | grep -v -- '-headers' | head -n1)
+                if [[ -n "${kernel_pkg}" ]]; then
+                    headers_pkg="${kernel_pkg}-headers"
+                    pkgs+=("${headers_pkg}")
+                else
+                    pkgs+=("linux-headers-${kver}")
+                fi
+            fi
+            ;;
         zfs)
             if [[ "${target_kernel}" != "linux" &&
                   "${target_kernel}" != "linux-lts" &&

@@ -64,6 +64,11 @@ stage_chroot() {
         log_info "ZFS environment validation successful."
     fi
 
+    if [[ "${fs_type}" == 'bcachefs' ]]; then
+        log_info "Building Bcachefs DKMS module for target kernel..."
+        artix-chroot /mnt dkms autoinstall bcachefs || log_warn "Bcachefs DKMS build failed"
+    fi
+
     if ! configure_users; then
         log_error "User configuration failed."
         return 1

@@ -86,7 +86,7 @@ create_filesystems() {
         xfs)
             log_info "Creating XFS filesystem (GRUB-compatible)..."
             local xfs_config="/usr/share/xfsprogs/mkfs/lts_6.6.conf"
-            
+
             if [[ -f "${xfs_config}" ]]; then
                 mkfs.xfs -f -c "options=${xfs_config}" -m bigtime=0 "${root_part}"
             else
@@ -113,7 +113,7 @@ create_filesystems() {
 
         bcachefs)
             log_info "Creating Bcachefs filesystem..."
-            mkfs.bcachefs --force "${root_part}"
+            mkfs.bcachefs --force --replicas=1 "${root_part}"
             ;;
 
         exfat)

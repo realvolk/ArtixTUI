@@ -142,7 +142,7 @@ EOF
         ext4)      pkgs+=(e2fsprogs) ;;
         xfs)       pkgs+=(xfsprogs) ;;
         f2fs)      pkgs+=(f2fs-tools) ;;
-        bcachefs)  pkgs+=(bcachefs-tools) ;;
+        bcachefs)  pkgs+=(bcachefs-tools bcachefs-dkms) ;;
         exfat)     pkgs+=(exfatprogs) ;;
         zfs)
             log_info "Setting up OpenZFS repository..."
@@ -285,6 +285,11 @@ EOF
 
         log_info "Adding ZFS hook to mkinitcpio..."
         artix-chroot /mnt sed -i 's/^HOOKS=.*/HOOKS=(base udev autodetect modconf block keyboard zfs filesystems)/' /etc/mkinitcpio.conf
+    fi
+
+    if [[ "${fs_type}" == 'bcachefs' ]]; then
+        log_info "Adding Bcachefs hook to mkinitcpio..."
+        artix-chroot /mnt sed -i 's/^HOOKS=.*/HOOKS=(base udev autodetect modconf block keyboard bcachefs filesystems)/' /etc/mkinitcpio.conf
     fi
 
     if [[ "${kernel}" == 'tkg' ]]; then
