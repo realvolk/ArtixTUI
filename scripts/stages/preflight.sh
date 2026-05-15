@@ -115,6 +115,13 @@ EOF
         log_info "Preflight dependencies installed.";
     fi;
 
+        log_info "Kernel: $(uname -r)"
+        log_info "Installed ZFS packages:"
+        pacman -Q | grep '^zfs' || true
+        log_info "Available ZFS modules:"
+        find /usr/lib/modules -iname 'zfs.ko*' 2>/dev/null || true
+        depmod -a
+
     if [[ "${fs_type}" == 'zfs' ]]; then
         if ! modprobe zfs 2>/dev/null; then
             die "Failed to load ZFS kernel module."
