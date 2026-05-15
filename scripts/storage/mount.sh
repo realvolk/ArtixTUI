@@ -31,8 +31,8 @@ mount_filesystems() {
         f2fs)  modprobe f2fs 2>/dev/null || true ;;
         exfat) modprobe exfat 2>/dev/null || true ;;
     esac
-    modprobe vfat 2>/dev/null || true
-    command -v mount.vfat >/dev/null || die 'mount.vfat unavailable (util-linux/vfat support missing)'
+    command -v mount >/dev/null || die 'mount unavailable (util-linux missing)'
+    modprobe vfat 2>/dev/null || die 'vfat kernel module unavailable'
     umount -R /mnt/boot/efi 2>/dev/null || true
     umount -R /mnt 2>/dev/null || true
     mkdir -p /mnt
