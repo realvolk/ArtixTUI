@@ -221,6 +221,10 @@ EOF
     [[ -x /mnt/bin/bash ]] || die "/mnt/bin/bash missing after basestrap"
     [[ -f /mnt/etc/os-release ]] || die "target root invalid after basestrap"
 
+    if ! grep -q '^Architecture' /mnt/etc/pacman.conf 2>/dev/null; then
+        sed -i '1s/^/[options]\nArchitecture = auto\n\n/' /mnt/etc/pacman.conf
+    fi
+
     case "${kernel}" in
         linux-cachyos-bore)
             if ! grep -q '^\[cachyos\]' /mnt/etc/pacman.conf 2>/dev/null; then
