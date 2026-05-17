@@ -201,7 +201,7 @@ ArtixTUI/
 # Contributing
 
 Contributions are welcome and appreciated.
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on testing,
+Please read [CONTRIBUTING.md](CONTRIBUTING) for guidelines on testing,
 submissions, and code of conduct.
 
 ---
